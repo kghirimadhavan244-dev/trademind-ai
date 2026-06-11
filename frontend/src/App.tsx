@@ -3,6 +3,7 @@ import Search from "./pages/Search";
 import Home from "./pages/Home";
 import AIChat from "./pages/AIChat";
 import Dashboard from "./pages/Dashboard";
+import PaperTrading from "./pages/PaperTrading";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/chat" element={<AIChat />} />
         <Route path="/search" element={<Search />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/paper-trading" element={<PaperTrading />} />
       </Routes>
     </BrowserRouter>
   );
