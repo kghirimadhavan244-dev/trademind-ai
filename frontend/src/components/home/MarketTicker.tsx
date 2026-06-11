@@ -25,38 +25,39 @@ function MarketTicker() {
 
     loadMarkets();
 
-    // Refresh every 30 seconds
     const interval = setInterval(loadMarkets, 30000);
 
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="border-y border-slate-800 bg-slate-900 py-4">
-      <div className="mx-auto flex max-w-7xl justify-center gap-8 overflow-x-auto px-4">
+    <section className="mx-auto max-w-7xl px-6 py-12">
+      <div className="grid gap-6 md:grid-cols-3">
         {markets.map((item) => (
           <div
             key={item.symbol}
-            className="rounded-xl bg-slate-800 px-5 py-3 text-center shadow"
+            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
           >
-            <div className="text-sm text-slate-400">{item.symbol}</div>
+            <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
+              {item.symbol}
+            </p>
 
-            <div className="text-xl font-bold text-white">
+            <h2 className="mt-3 text-3xl font-bold text-slate-900">
               ${item.price.toFixed(2)}
-            </div>
+            </h2>
 
-            <div
-              className={`text-sm font-semibold ${
-                item.change >= 0 ? "text-green-400" : "text-red-400"
+            <p
+              className={`mt-2 text-lg font-semibold ${
+                item.change >= 0 ? "text-emerald-600" : "text-red-500"
               }`}
             >
               {item.change >= 0 ? "+" : ""}
               {item.change.toFixed(2)}%
-            </div>
+            </p>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 

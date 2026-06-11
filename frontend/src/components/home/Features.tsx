@@ -1,49 +1,57 @@
 function Features() {
   const features = [
     {
-      title: "🤖 AI Trading Assistant",
+      icon: "🤖",
+      title: "AI Trading Assistant",
       description:
-        "Get instant market analysis, explanations, and trading ideas powered by Gemini AI.",
+        "Get intelligent market explanations, financial insights, and trading guidance powered by Gemini AI.",
     },
     {
-      title: "📈 Live Market Insights",
+      icon: "📈",
+      title: "Live Market Data",
       description:
-        "Track stocks, indices, and crypto markets with real-time updates and trends.",
+        "Track stocks and markets in real time with reliable financial data integrations.",
     },
     {
-      title: "🧪 Paper Trading",
+      icon: "🧪",
+      title: "Paper Trading",
       description:
-        "Practice your strategies with virtual money before risking real capital.",
+        "Practice investing with virtual funds before putting real money on the line.",
     },
     {
-      title: "💼 Portfolio Tracking",
+      icon: "💼",
+      title: "Portfolio Tracking",
       description:
-        "Monitor your investments, profits, and performance in one dashboard.",
+        "Monitor performance, positions, and growth from one elegant dashboard.",
     },
   ];
 
   return (
     <section className="mx-auto max-w-7xl px-6 py-20">
       <div className="text-center">
-        <h2 className="text-4xl font-bold text-white">
-          Everything You Need to Trade Smarter
+        <h2 className="text-5xl font-bold tracking-tight text-slate-900">
+          Everything You Need
         </h2>
-        <p className="mt-4 text-slate-400">
-          Built for beginners, investors, and experienced traders.
+
+        <p className="mx-auto mt-5 max-w-2xl text-lg text-slate-600">
+          Built for students, investors, and traders who want AI-powered
+          financial intelligence in one seamless platform.
         </p>
       </div>
 
-      <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-14 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
         {features.map((feature) => (
           <div
             key={feature.title}
-            className="rounded-2xl border border-slate-800 bg-slate-900 p-6 transition duration-300 hover:-translate-y-1 hover:border-emerald-500"
+            className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
           >
-            <h3 className="text-xl font-semibold text-emerald-400">
+            <div className="text-5xl">{feature.icon}</div>
+
+            <h3 className="mt-6 text-2xl font-bold text-slate-900">
               {feature.title}
             </h3>
 
-            <p className="mt-4 text-slate-300">
+            <p className="mt-4 leading-7 text-slate-600">
               {feature.description}
             </p>
           </div>
