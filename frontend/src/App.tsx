@@ -1,9 +1,17 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Search from "./pages/Search";
+import Home from "./pages/Home";
+import AIChat from "./pages/AIChat";
+
 function App() {
   return (
-    <div>
-      <h1>TradeMind AI</h1>
-      <p>Building the Future of AI-Powered Trading</p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/chat" element={<AIChat />} />
+        <Route path="/search" element={<Search />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
