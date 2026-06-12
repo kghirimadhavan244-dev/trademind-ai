@@ -8,6 +8,7 @@ import chatRouter from "./routes/chat";
 import marketsRouter from "./routes/markets";
 import searchRouter from "./routes/search";
 import analyzeRouter from "./routes/analyze";
+import authRouter from "./routes/auth";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use("/api/analyze", analyzeRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/markets", marketsRouter);
 app.use("/api/search", searchRouter);
+app.use("/api/auth", authRouter);
 
 app.get("/", (_req, res) => {
   res.json({
