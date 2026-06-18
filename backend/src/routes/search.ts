@@ -1,24 +1,21 @@
+
 import { Router } from "express";
-import axios from "axios";
+import { fetchStockQuote } from "../utils/marketService";
 
 const router = Router();
 
 router.get("/:symbol", async (req, res) => {
+  const inputSymbol = req.params.symbol.toUpperCase();
   try {
-    const symbol = req.params.symbol.toUpperCase();
-    const apiKey = process.env.FINNHUB_API_KEY;
-
-    const response = await axios.get(
-      `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`
-    );
-
-    res.json({
+    const data = await fetchStockQuote(inputSymbol);
+    return res.json({
       success: true,
-      symbol,
-      data: response.data,
+      symbol: inputSymbol,
+      data,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error(`Error in search route for ${inputSymbol}:`, error);
+    return res.status(550).json({
       success: false,
       message: "Unable to fetch stock.",
     });
@@ -26,3 +23,4 @@ router.get("/:symbol", async (req, res) => {
 });
 
 export default router;
+

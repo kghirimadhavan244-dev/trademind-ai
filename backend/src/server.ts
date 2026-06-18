@@ -9,6 +9,12 @@ import marketsRouter from "./routes/markets";
 import searchRouter from "./routes/search";
 import analyzeRouter from "./routes/analyze";
 import authRouter from "./routes/auth";
+import paperRouter from "./routes/paper";
+import watchlistRoutes from "./routes/watchlist";
+import newsRoutes from "./routes/news";
+import portfolioAiRouter from "./routes/portfolioAI";
+import aiPilotRouter from "./routes/aiPilot";
+import aiPilotBacktestRouter from "./routes/aiPilotBacktest";
 
 const app = express();
 
@@ -20,7 +26,12 @@ app.use("/api/chat", chatRouter);
 app.use("/api/markets", marketsRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/auth", authRouter);
-
+app.use("/api/paper", paperRouter);
+app.use("/api/watchlist", watchlistRoutes);
+app.use("/api/news", newsRoutes);
+app.use("/api/portfolio-ai", portfolioAiRouter);
+app.use("/api/ai-pilot", aiPilotRouter);
+app.use("/api/ai-pilot", aiPilotBacktestRouter);
 app.get("/", (_req, res) => {
   res.json({
     success: true,

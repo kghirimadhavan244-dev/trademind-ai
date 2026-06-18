@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../config";
 import { useEffect, useState } from "react";
 
 type MarketItem = {
@@ -12,7 +13,7 @@ function MarketTicker() {
   useEffect(() => {
     async function loadMarkets() {
       try {
-        const res = await fetch("http://localhost:5000/api/markets");
+        const res = await fetch(`${API_BASE_URL}/api/markets`);
         const data = await res.json();
 
         if (data.success) {
@@ -43,7 +44,7 @@ function MarketTicker() {
             </p>
 
             <h2 className="mt-3 text-3xl font-bold text-slate-900">
-              ${item.price.toFixed(2)}
+              ₹{item.price.toFixed(2)}
             </h2>
 
             <p

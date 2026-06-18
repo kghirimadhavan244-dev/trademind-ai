@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -12,5 +12,59 @@ model User {
   name      String
   email     String   @unique
   password  String
-  createdAt DateTime @default(now())
+
+  // Virtual cash balance for paper trading
+  cash      Float    @default(1000000)
+
+  // Risk profile & preferences
+  riskProfile        String   @default("Moderate")
+  investmentGoal     String   @default("Wealth Growth")
+  monthlyBudget      Float    @default(10000)
+  timeHorizon        String   @default("Medium (3-5 years)")
+  sectorPreference   String   @default("Technology, Finance")
+
+  // Relations
+  holdings     Holding[]
+  transactions Transaction[]
+  watchlist Watchlist[]
 }
+
+model Holding {
+  id        Int      @id @default(autoincrement())
+  symbol    String
+  quantity  Int
+  buyPrice  Float
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  type      String   // BUY or SELL
+  symbol    String
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+model EmailVerification {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  otp        String
+  expiresAt  DateTime
+  verified   Boolean  @default(false)
+}
+model Watchlist {
+  id      Int    @id @default(autoincrement())
+  symbol  String
+
+  userId  Int
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+

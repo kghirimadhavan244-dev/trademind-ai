@@ -1,5 +1,5 @@
 import { Router } from "express";
-import axios from "axios";
+import { fetchStockQuote } from "../utils/marketService";
 import { askGemini } from "../services/gemini";
 
 const router = Router();
@@ -7,13 +7,9 @@ const router = Router();
 router.get("/:symbol", async (req, res) => {
   try {
     const symbol = req.params.symbol.toUpperCase();
-    const apiKey = process.env.FINNHUB_API_KEY;
+    const quote = await fetchStockQuote(symbol);
 
-    const quote = await axios.get(
-      `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`
-    );
-
-    const { c, dp, h, l } = quote.data;
+    const { c, dp, h, l } = quote;
 
     const prompt = `
 You are TradeMind AI, a financial assistant.

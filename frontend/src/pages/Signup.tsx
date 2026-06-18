@@ -1,3 +1,5 @@
+import { API_BASE_URL } from "../config";
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -7,19 +9,80 @@ function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [verified, setVerified] = useState(false);
+
+  async function sendOtp() {
+    if (!email) {
+      alert("Please enter your email first.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.message);
+        return;
+      }
+
+      setOtpSent(true);
+      alert("Verification code sent to your email.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to send verification code.");
+    }
+  }
+
+  async function verifyOtp() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          otp,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.message);
+        return;
+      }
+
+      setVerified(true);
+      alert("Email verified successfully.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to verify OTP.");
+    }
+  }
 
   async function handleSignup() {
-    if (!name || !email || !password) {
-      alert("Please fill all fields.");
+    if (!verified) {
+      alert("Please verify your email first.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/signup", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -34,21 +97,18 @@ function Signup() {
       const data = await res.json();
 
       if (!data.success) {
-        alert(data.message || "Signup failed.");
+        alert(data.message);
         setLoading(false);
         return;
       }
 
-      // Save token and user
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      alert("✅ Account created successfully!");
-
       navigate("/dashboard");
-    } catch (error) {
-      console.error(error);
-      alert("❌ Unable to connect to the server.");
+    } catch (err) {
+      console.error(err);
+      alert("Signup failed.");
     }
 
     setLoading(false);
@@ -57,74 +117,76 @@ function Signup() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white via-slate-50 to-blue-50 px-6">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-slate-900">
-            Create Account 🚀
-          </h1>
+        <h1 className="mb-6 text-center text-4xl font-bold">
+          Create Account
+        </h1>
 
-          <p className="mt-3 text-slate-600">
-            Join TradeMind AI and start your smarter investing journey.
-          </p>
-        </div>
+        <div className="space-y-4">
+          <input
+            className="w-full rounded-xl border p-3"
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-        <div className="mt-8 space-y-5">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Full Name
-            </label>
+          <input
+            className="w-full rounded-xl border p-3"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-            <input
-              type="text"
-              placeholder="John Doe"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
+          <button
+            onClick={sendOtp}
+            className="w-full rounded-xl bg-slate-800 py-3 font-semibold text-white"
+          >
+            Send Verification Code
+          </button>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Email
-            </label>
+          {otpSent && (
+            <>
+              <input
+                className="w-full rounded-xl border p-3"
+                placeholder="Enter Verification Code"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+              />
 
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
+              <button
+                onClick={verifyOtp}
+                className="w-full rounded-xl bg-green-600 py-3 font-semibold text-white"
+              >
+                Verify Email
+              </button>
+            </>
+          )}
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Password
-            </label>
-
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
+          <input
+            type="password"
+            className="w-full rounded-xl border p-3"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
           <button
             onClick={handleSignup}
-            disabled={loading}
-            className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            disabled={!verified || loading}
+            className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white disabled:opacity-50"
           >
             {loading ? "Creating Account..." : "Create Account"}
           </button>
+
+          {verified && (
+            <p className="text-center text-sm text-green-600">
+              Email verified successfully.
+            </p>
+          )}
         </div>
 
-        <p className="mt-6 text-center text-slate-600">
+        <p className="mt-6 text-center">
           Already have an account?{" "}
-          <Link
-            to="/login"
-            className="font-semibold text-blue-600 hover:text-blue-700"
-          >
+          <Link to="/login" className="font-semibold text-blue-600">
             Sign In
           </Link>
         </p>
