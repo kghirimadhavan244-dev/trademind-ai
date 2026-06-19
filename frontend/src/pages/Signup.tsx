@@ -14,12 +14,15 @@ function Signup() {
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [verified, setVerified] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
 
   async function sendOtp() {
     if (!email) {
       alert("Please enter your email first.");
       return;
     }
+
+    setOtpLoading(true);
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
@@ -34,6 +37,7 @@ function Signup() {
 
       if (!data.success) {
         alert(data.message);
+        setOtpLoading(false);
         return;
       }
 
@@ -48,6 +52,8 @@ function Signup() {
       console.error(err);
       alert("Failed to send verification code.");
     }
+
+    setOtpLoading(false);
   }
 
   async function verifyOtp() {
@@ -143,9 +149,10 @@ function Signup() {
 
           <button
             onClick={sendOtp}
-            className="w-full rounded-xl bg-slate-800 py-3 font-semibold text-white"
+            disabled={otpLoading}
+            className="w-full rounded-xl bg-slate-800 py-3 font-semibold text-white disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
           >
-            Send Verification Code
+            {otpLoading ? "Sending Code..." : "Send Verification Code"}
           </button>
 
           {otpSent && (
