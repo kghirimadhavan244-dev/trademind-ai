@@ -15,6 +15,7 @@ import Watchlist from "./pages/Watchlist";
 import PortfolioAI from "./pages/PortfolioAI";
 import AIPilot from "./pages/AIPilot";
 import Profile from "./pages/Profile";
+import Guide from "./pages/Guide";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 
@@ -69,6 +70,14 @@ function App() {
   element={
     <ProtectedRoute>
       <AIPilot />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/guide"
+  element={
+    <ProtectedRoute>
+      <Guide />
     </ProtectedRoute>
   }
 />

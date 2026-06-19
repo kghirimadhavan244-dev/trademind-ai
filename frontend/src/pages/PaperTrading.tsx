@@ -2,6 +2,7 @@ import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
+import HelpTip from "../components/common/HelpTip";
 
 type Holding = {
   symbol: string;
@@ -256,8 +257,9 @@ function PaperTrading() {
 
         {/* Balance Card */}
         <div className="mt-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center">
             Virtual Cash Balance
+            <HelpTip content="Play money (₹10,00,000) loaded automatically in your account to practice trading stocks risk-free." />
           </h2>
 
           <p className="mt-2 text-4xl font-extrabold text-emerald-600">
@@ -275,6 +277,7 @@ function PaperTrading() {
           <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-md">
             <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="text-blue-600">●</span> Buy Securities
+              <HelpTip content="Enter the NSE ticker symbol and quantity to purchase shares using your virtual cash balance." />
             </h2>
 
             <div className="space-y-4">
@@ -312,6 +315,7 @@ function PaperTrading() {
           <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-md">
             <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="text-amber-500">●</span> Sell Securities
+              <HelpTip content="Enter the stock symbol and quantity to sell your owned shares back into virtual cash based on current price rates." />
             </h2>
 
             <div className="space-y-4">

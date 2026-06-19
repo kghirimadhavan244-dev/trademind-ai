@@ -13,6 +13,7 @@ import {
   Play
 } from "lucide-react";
 import Navbar from "../components/layout/Navbar";
+import HelpTip from "../components/common/HelpTip";
 import {
   ResponsiveContainer,
   LineChart,
@@ -361,6 +362,7 @@ function AIPilot() {
                 <div>
                   <h3 className="text-base font-extrabold flex items-center gap-2 text-slate-800 dark:text-white">
                     <Sparkles className="w-5 h-5 text-amber-500" /> Autopilot Switch
+                    <HelpTip content="Toggle to activate TradeMind's AI model to run automated transactions on your account based on neural scanner suggestions." />
                   </h3>
                   <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-normal">
                     Let TradeMind AI scan recommendations and trade dynamically on your virtual cash balance.
@@ -400,6 +402,7 @@ function AIPilot() {
                 <div>
                   <h3 className="text-base font-extrabold flex items-center gap-2 text-slate-800 dark:text-white">
                     <Activity className="w-5 h-5 text-blue-500" /> Neural Scanner
+                    <HelpTip content="AI-powered scanner evaluating market structures, EMA crossover zones, and daily price indicators in real-time." />
                   </h3>
                   <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-normal">
                     Runs real-time trend line and price action scans using Gemini models over 10 active blue-chip assets.
@@ -434,7 +437,10 @@ function AIPilot() {
                 </div>
 
                 <div className="mt-6 border-t border-slate-100 dark:border-slate-850 pt-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Available Cash</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center">
+                    Available Cash
+                    <HelpTip content="Virtual funds available in your account to deploy for AI-piloted trade executions." />
+                  </span>
                   <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
                     ₹{cash.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </span>
@@ -447,7 +453,10 @@ function AIPilot() {
               {/* Growth Line Graph */}
               <div className="lg:col-span-2 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col justify-between">
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white">Autopilot Yield Growth</h3>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center">
+                    Autopilot Yield Growth
+                    <HelpTip content="Cumulative return comparison between the AI Autopilot model and the baseline Nifty 50 index." />
+                  </h3>
                   <p className="text-xs text-slate-500 mt-0.5">Cumulative percentage return compared to Nifty 50 baseline performance.</p>
                 </div>
 
@@ -764,7 +773,10 @@ function AIPilot() {
                 {/* Metrics Grid */}
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Strategy Yield</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center">
+                      Strategy Yield
+                      <HelpTip content="Percentage return earned by executing this algorithmic strategy over 1 year." />
+                    </span>
                     <h2 className={`text-3xl font-black mt-2 ${backtestResults.metrics.totalReturn >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                       {backtestResults.metrics.totalReturn >= 0 ? "+" : ""}{backtestResults.metrics.totalReturn}%
                     </h2>
@@ -772,7 +784,10 @@ function AIPilot() {
                   </div>
 
                   <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Benchmark Buy & Hold</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center">
+                      Benchmark Buy & Hold
+                      <HelpTip content="Percentage return if you simply purchased the stock on Day 1 and held it for 1 year." />
+                    </span>
                     <h2 className={`text-3xl font-black mt-2 ${backtestResults.metrics.buyAndHoldReturn >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
                       {backtestResults.metrics.buyAndHoldReturn >= 0 ? "+" : ""}{backtestResults.metrics.buyAndHoldReturn}%
                     </h2>
@@ -780,7 +795,10 @@ function AIPilot() {
                   </div>
 
                   <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Win Rate (Sell Orders)</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center">
+                      Win Rate (Sell Orders)
+                      <HelpTip content="Percentage of closed trades that resulted in a positive net return." />
+                    </span>
                     <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-2">
                       {backtestResults.metrics.winRate}%
                     </h2>
@@ -788,7 +806,10 @@ function AIPilot() {
                   </div>
 
                   <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Max Peak Drawdown</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center">
+                      Max Peak Drawdown
+                      <HelpTip content="The maximum percentage drop in capital from its highest peak during the backtest." />
+                    </span>
                     <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-2">
                       -{backtestResults.metrics.maxDrawdown}%
                     </h2>

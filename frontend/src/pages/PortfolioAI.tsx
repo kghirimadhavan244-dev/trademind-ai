@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import Navbar from "../components/layout/Navbar";
+import HelpTip from "../components/common/HelpTip";
 
 type PortfolioSummary = {
   cash: number;
@@ -72,21 +73,30 @@ function PortfolioAI() {
         {summary && (
           <div className="grid gap-6 md:grid-cols-3 mb-8">
             <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Total Portfolio Value</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center">
+                Total Portfolio Value
+                <HelpTip content="The total worth of all your stock holdings plus your remaining virtual cash balance." />
+              </span>
               <h2 className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white">
                 ₹{summary.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h2>
             </div>
 
             <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Available Liquid Cash</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center">
+                Available Liquid Cash
+                <HelpTip content="Virtual funds available in your account to purchase new stock shares." />
+              </span>
               <h2 className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white">
                 ₹{summary.cash.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h2>
             </div>
 
             <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Active Stock Holdings</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center">
+                Active Stock Holdings
+                <HelpTip content="The total number of different companies whose shares you currently own." />
+              </span>
               <h2 className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white">
                 {summary.holdingsCount} {summary.holdingsCount === 1 ? "Security" : "Securities"}
               </h2>
@@ -96,7 +106,10 @@ function PortfolioAI() {
 
         {summary && summary.totalValue > 0 && (
           <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm mb-8">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-450 mb-3">Asset Allocation Breakdown</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-450 mb-3 flex items-center">
+              Asset Allocation Breakdown
+              <HelpTip content="Shows the proportion of your portfolio value in stock investments vs liquid cash." />
+            </h3>
             <div className="w-full bg-slate-100 rounded-full h-6 overflow-hidden flex">
               <div
                 style={{ width: `${equityPercent}%` }}
@@ -128,6 +141,7 @@ function PortfolioAI() {
         <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-md">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-4 mb-6 flex items-center gap-2">
             📋 AI Portfolio Assessment
+            <HelpTip content="AI-generated recommendations detailing your portfolio risk score, sector diversification, and suggested adjustments." />
           </h2>
 
           {loading ? (

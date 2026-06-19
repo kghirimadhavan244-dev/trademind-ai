@@ -166,6 +166,13 @@ function Navbar() {
             </Link>
 
             <Link
+              to="/guide"
+              className="text-slate-600 dark:text-slate-300 transition hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm"
+            >
+              Guide
+            </Link>
+
+            <Link
               to="/transactions"
               className="text-slate-600 dark:text-slate-300 transition hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm"
             >
