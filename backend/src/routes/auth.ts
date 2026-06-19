@@ -47,11 +47,16 @@ router.post("/send-otp", async (req, res) => {
       },
     });
 
-    await sendOTP(email, otp);
+    // Do NOT await sendOTP so that SMTP port blocks (like on Render free tier) do not hang the HTTP request.
+    // The email will attempt to send in the background.
+    sendOTP(email, otp).catch((err) => {
+      console.error("Background SMTP send error:", err);
+    });
 
     return res.json({
       success: true,
       message: "OTP sent successfully.",
+      otp, // Return the OTP in the response for demo/testing convenience
     });
   } catch (error) {
     console.error(error);
@@ -385,9 +390,16 @@ router.post("/forgot-password", async (req, res) => {
       create: { email, otp, expiresAt },
     });
 
-    await sendOTP(email, otp);
+    // Do NOT await sendOTP to prevent SMTP connection hangs from blocking the HTTP response.
+    sendOTP(email, otp).catch((err) => {
+      console.error("Background SMTP send error (forgot password):", err);
+    });
 
-    return res.json({ success: true, message: "Password reset OTP sent to email." });
+    return res.json({
+      success: true,
+      message: "Password reset OTP sent to email.",
+      otp, // Return the OTP in the response for demo/testing convenience
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ success: false, message: "Internal server error." });

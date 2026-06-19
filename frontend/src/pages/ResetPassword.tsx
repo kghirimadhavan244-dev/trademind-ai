@@ -14,8 +14,12 @@ function ResetPassword() {
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
+    const otpParam = searchParams.get("otp");
     if (emailParam) {
       setEmail(emailParam);
+    }
+    if (otpParam) {
+      setOtp(otpParam);
     }
   }, [searchParams]);
 

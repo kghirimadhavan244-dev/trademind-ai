@@ -38,7 +38,12 @@ function Signup() {
       }
 
       setOtpSent(true);
-      alert("Verification code sent to your email.");
+      if (data.otp) {
+        alert(`Verification code generated! (Demo Mode: Autofilling code "${data.otp}")`);
+        setOtp(data.otp);
+      } else {
+        alert("Verification code sent to your email.");
+      }
     } catch (err) {
       console.error(err);
       alert("Failed to send verification code.");

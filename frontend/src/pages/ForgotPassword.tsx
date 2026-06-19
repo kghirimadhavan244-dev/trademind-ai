@@ -32,8 +32,13 @@ function ForgotPassword() {
         return;
       }
 
-      alert("✅ Password reset verification code has been sent to your email!");
-      navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+      if (data.otp) {
+        alert(`✅ Password reset code generated! (Demo Mode: Redirecting with code "${data.otp}")`);
+        navigate(`/reset-password?email=${encodeURIComponent(email)}&otp=${data.otp}`);
+      } else {
+        alert("✅ Password reset verification code has been sent to your email!");
+        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+      }
     } catch (err) {
       console.error(err);
       alert("❌ Unable to connect to server.");
