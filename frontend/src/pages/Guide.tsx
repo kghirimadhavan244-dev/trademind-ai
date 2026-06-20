@@ -170,8 +170,8 @@ export default function Guide() {
                       </p>
                     </div>
                   </div>
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-500 dark:text-slate-300">
-                    💡 **Market Trend Rule**: If NIFTY 50 or SENSEX is rising, it generally indicates that the major companies are performing well, which typically boosts investor confidence.
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-550 dark:text-slate-350">
+                    <strong>Market Trend Rule</strong>: If NIFTY 50 or SENSEX is rising, it generally indicates that the major companies are performing well, which typically boosts investor confidence.
                   </div>
                 </div>
               </div>
@@ -214,7 +214,7 @@ export default function Guide() {
                       <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">{item.desc}</p>
                     </div>
                     <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60 text-[11px] italic font-semibold text-slate-550 dark:text-slate-400">
-                      📝 {item.example}
+                      Example: {item.example}
                     </div>
                   </div>
                 ))}
@@ -240,16 +240,16 @@ export default function Guide() {
                   <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-3">
                     <span className="text-[10px] font-black uppercase tracking-wider text-purple-500">Ask the AI</span>
                     <ul className="text-xs font-bold text-slate-700 dark:text-slate-300 space-y-2">
-                      <li className="flex items-center gap-2">💬 "Explain Reliance's core products"</li>
-                      <li className="flex items-center gap-2">💬 "What does diversification mean?"</li>
-                      <li className="flex items-center gap-2">💬 "Compare TCS and Infosys performance"</li>
-                      <li className="flex items-center gap-2">💬 "Analyze my current portfolio risk"</li>
+                      <li className="flex items-center gap-2">"Explain Reliance's core products"</li>
+                      <li className="flex items-center gap-2">"What does diversification mean?"</li>
+                      <li className="flex items-center gap-2">"Compare TCS and Infosys performance"</li>
+                      <li className="flex items-center gap-2">"Analyze my current portfolio risk"</li>
                     </ul>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-amber-50/10 dark:bg-amber-900/10 border border-amber-300/20 dark:border-amber-900/30 flex flex-col justify-between">
                     <div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">⚠️ Disclaimer</span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">Disclaimer</span>
                       <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-semibold mt-2">
                         Our AI models provide educational quantitative analysis and information. It is designed to assist your learning process, not to provide guaranteed financial or investment advice.
                       </p>
@@ -347,9 +347,8 @@ export default function Guide() {
                 <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
                   A watchlist is your personalized bookmark list of stocks. It allows you to monitor price movements, daily gains, and analysis charts of companies you are interested in, without committing your virtual cash budget.
                 </p>
-                <div className="flex items-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-350 bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <span className="shrink-0 text-xl">💡</span>
-                  Use it to flag assets like Tata Motors, Infosys, or HDFC Bank to observe how their charts behave before deploying buy orders.
+                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                  Use the watchlist to flag assets like Tata Motors, Infosys, or HDFC Bank to observe how their charts behave before deploying buy orders.
                 </div>
               </div>
             </section>
@@ -386,9 +385,9 @@ export default function Guide() {
                       Indicates how widely the value of your portfolio fluctuates. Higher volatility equals higher potential growth but also larger paper losses.
                     </p>
                   </div>
-                  <div className="mt-4 text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                    📈 **High**: Volatile stocks.<br/>
-                    🛡️ **Low**: Stable bluechips.
+                  <div className="mt-4 text-[10px] text-slate-550 dark:text-slate-400 leading-relaxed font-semibold">
+                    High: Volatile stocks.<br/>
+                    Low: Stable bluechips.
                   </div>
                 </div>
 
@@ -401,8 +400,8 @@ export default function Guide() {
                       How your total capital is distributed across different industries (e.g. Technology, Healthcare, Utilities).
                     </p>
                   </div>
-                  <div className="mt-4 text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                    📊 **Example allocation**: IT 40%, Banking 30%, FMCG 30%.
+                  <div className="mt-4 text-[10px] text-slate-550 dark:text-slate-400 leading-relaxed font-semibold">
+                    Example allocation: IT 40%, Banking 30%, FMCG 30%.
                   </div>
                 </div>
               </div>

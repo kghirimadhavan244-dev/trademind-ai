@@ -280,7 +280,7 @@ router.post("/execute-auto", async (req, res) => {
       return res.json({
         success: true,
         tradeExecuted: true,
-        log: `🤖 AI Autopilot BUY: Purchased ${qty} shares of ${symbol} at ₹${price.toFixed(2)} (Total Value: ₹${cost.toLocaleString("en-IN")}).`
+        log: `[Autopilot] BUY: Purchased ${qty} shares of ${symbol} at ₹${price.toFixed(2)} (Total Value: ₹${cost.toLocaleString("en-IN")}).`
       });
 
     } else if (type === "SELL") {
@@ -343,7 +343,7 @@ router.post("/execute-auto", async (req, res) => {
       return res.json({
         success: true,
         tradeExecuted: true,
-        log: `🤖 AI Autopilot SELL: Liquidated ${sellQty} shares of ${symbol} at ₹${price.toFixed(2)} (Total proceeds added: ₹${proceeds.toLocaleString("en-IN")}).`
+        log: `[Autopilot] SELL: Liquidated ${sellQty} shares of ${symbol} at ₹${price.toFixed(2)} (Total proceeds added: ₹${proceeds.toLocaleString("en-IN")}).`
       });
     }
 

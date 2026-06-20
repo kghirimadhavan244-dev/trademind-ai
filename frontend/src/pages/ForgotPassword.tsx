@@ -33,15 +33,15 @@ function ForgotPassword() {
       }
 
       if (data.otp) {
-        alert(`✅ Password reset code generated! (Demo Mode: Redirecting with code "${data.otp}")`);
+        alert(`Password reset code generated! (Demo Mode: Redirecting with code "${data.otp}")`);
         navigate(`/reset-password?email=${encodeURIComponent(email)}&otp=${data.otp}`);
       } else {
-        alert("✅ Password reset verification code has been sent to your email!");
+        alert("Password reset verification code has been sent to your email!");
         navigate(`/reset-password?email=${encodeURIComponent(email)}`);
       }
     } catch (err) {
       console.error(err);
-      alert("❌ Unable to connect to server.");
+      alert("Unable to connect to server.");
     }
 
     setLoading(false);
@@ -52,7 +52,7 @@ function ForgotPassword() {
       <div className="w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-xl transition-all duration-300">
         <div className="text-center">
           <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Forgot Password? 🔑
+            Forgot Password
           </h1>
           <p className="mt-3 text-slate-600 dark:text-slate-400 text-sm">
             Enter your email address below, and we'll send you a 6-digit verification code to reset your password.

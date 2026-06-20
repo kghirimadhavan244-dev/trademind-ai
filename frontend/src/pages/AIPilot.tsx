@@ -123,20 +123,20 @@ function AIPilot() {
   // Fetch signals
   async function scanMarket() {
     setScanning(true);
-    addLog("🔍 Starting market scan of NSE indices...");
+    addLog("[Scanner] Starting market scan of NSE indices...");
     try {
       const res = await fetch(`${API_BASE_URL}/api/ai-pilot/signals`);
       const data = await res.json();
       if (data.success) {
         setSignals(data.signals);
         setSource(data.source);
-        addLog(`✅ Scan completed successfully via ${data.source}. Found ${data.signals.filter((s: any) => s.type !== "HOLD").length} active trade setups.`);
+        addLog(`[Scanner] Scan completed successfully via ${data.source}. Found ${data.signals.filter((s: any) => s.type !== "HOLD").length} active trade setups.`);
       } else {
-        addLog("❌ Scan failed. Server returned error.");
+        addLog("[Scanner] Scan failed. Server returned error.");
       }
     } catch (err) {
       console.error(err);
-      addLog("❌ Network error. Failed to scan market.");
+      addLog("[Scanner] Network error. Failed to scan market.");
     }
     setScanning(false);
   }
@@ -175,7 +175,7 @@ function AIPilot() {
   // Autopilot loop simulation
   useEffect(() => {
     if (autopilot) {
-      addLog(`🤖 AI Autopilot ACTIVATED. Capital buffer configured to ₹${Number(deployCapital).toLocaleString("en-IN")}.`);
+      addLog(`[Autopilot] ACTIVATED. Capital buffer configured to ₹${Number(deployCapital).toLocaleString("en-IN")}.`);
       
       // Auto execution timer: execute a trade every 15 seconds
       autopilotTimerRef.current = setInterval(async () => {
@@ -183,7 +183,7 @@ function AIPilot() {
         
         const activeSignals = signals.filter(s => s.type !== "HOLD");
         if (activeSignals.length === 0) {
-          addLog("🤖 Autopilot check: No active signals detected to trade.");
+          addLog("[Autopilot] Check: No active signals detected to trade.");
           return;
         }
 
@@ -214,7 +214,7 @@ function AIPilot() {
     } else {
       if (autopilotTimerRef.current) {
         clearInterval(autopilotTimerRef.current);
-        addLog("🤖 AI Autopilot DEACTIVATED. Switched to manual override.");
+        addLog("[Autopilot] DEACTIVATED. Switched to manual override.");
       }
     }
 
@@ -265,7 +265,7 @@ function AIPilot() {
       return;
     }
 
-    addLog(`⚡ Deploying manual order for ${signal.symbol}...`);
+    addLog(`[Order] Deploying manual order for ${signal.symbol}...`);
     try {
       const res = await fetch(`${API_BASE_URL}/api/ai-pilot/execute-auto`, {
         method: "POST",

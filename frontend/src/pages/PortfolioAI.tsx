@@ -54,7 +54,7 @@ function PortfolioAI() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              🤖 AI Portfolio Advisor
+              AI Portfolio Advisor
             </h1>
             <p className="mt-2 text-lg text-slate-650 dark:text-slate-450">
               Personalized risk analysis, diversification reviews, and educational recommendations for your paper portfolio.
@@ -140,7 +140,7 @@ function PortfolioAI() {
         {/* Advisor Output Box */}
         <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-md">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-4 mb-6 flex items-center gap-2">
-            📋 AI Portfolio Assessment
+            AI Portfolio Assessment
             <HelpTip content="AI-generated recommendations detailing your portfolio risk score, sector diversification, and suggested adjustments." />
           </h2>
 

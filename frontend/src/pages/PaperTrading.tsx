@@ -138,7 +138,16 @@ function PaperTrading() {
       }
 
       alert(
-        `✅ Bought ${quantity} share(s) of ${cleanSymbol} at ₹${price.toFixed(2)}`
+        `Bought ${quantity} share(s) of ${cleanSymbol} at ₹${price.toFixed(2)}`
+      );
+
+      // Dispatch event to push notification
+      window.dispatchEvent(
+        new CustomEvent("new-notification", {
+          detail: {
+            message: `Successfully bought ${quantity} share(s) of ${cleanSymbol} at ₹${price.toFixed(2)}`,
+          },
+        })
       );
 
       setSymbol("");
@@ -222,7 +231,16 @@ function PaperTrading() {
       }
 
       alert(
-        `✅ Sold ${sellQuantity} share(s) of ${cleanSymbol} at ₹${price.toFixed(2)}`
+        `Sold ${sellQuantity} share(s) of ${cleanSymbol} at ₹${price.toFixed(2)}`
+      );
+
+      // Dispatch event to push notification
+      window.dispatchEvent(
+        new CustomEvent("new-notification", {
+          detail: {
+            message: `Successfully sold ${sellQuantity} share(s) of ${cleanSymbol} at ₹${price.toFixed(2)}`,
+          },
+        })
       );
 
       setSellSymbol("");
@@ -248,7 +266,7 @@ function PaperTrading() {
 
       <div className="mx-auto max-w-6xl p-8">
         <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-          📈 Paper Trading
+          Paper Trading
         </h1>
 
         <p className="mt-3 text-lg text-slate-650 dark:text-slate-450">

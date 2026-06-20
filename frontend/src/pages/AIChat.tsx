@@ -109,10 +109,20 @@ function AIChat() {
         });
         const data = await res.json();
         if (data.success) {
-          alert(`✅ Bought ${action.quantity} shares of ${action.symbol} successfully!`);
+          alert(`Bought ${action.quantity} shares of ${action.symbol} successfully!`);
+          
+          // Dispatch notification
+          window.dispatchEvent(
+            new CustomEvent("new-notification", {
+              detail: {
+                message: `AI Order: Bought ${action.quantity} share(s) of ${action.symbol} at ₹${action.price.toFixed(2)}`,
+              },
+            })
+          );
+          
           markActionExecuted(msgIndex);
         } else {
-          alert(`❌ Order failed: ${data.message}`);
+          alert(`Order failed: ${data.message}`);
         }
       } else if (action.type === "SELL") {
         let quantity = action.quantity;
@@ -126,11 +136,11 @@ function AIChat() {
             if (holding) {
               quantity = holding.quantity;
             } else {
-              alert(`❌ You don't hold any shares of ${action.symbol}.`);
+              alert(`You don't hold any shares of ${action.symbol}.`);
               return;
             }
           } else {
-            alert("❌ Failed to load holdings to resolve quantity.");
+            alert("Failed to load holdings to resolve quantity.");
             return;
           }
         }
@@ -147,10 +157,20 @@ function AIChat() {
         });
         const data = await res.json();
         if (data.success) {
-          alert(`✅ Sold ${quantity} shares of ${action.symbol} successfully!`);
+          alert(`Sold ${quantity} shares of ${action.symbol} successfully!`);
+          
+          // Dispatch notification
+          window.dispatchEvent(
+            new CustomEvent("new-notification", {
+              detail: {
+                message: `AI Order: Sold ${quantity} share(s) of ${action.symbol} at ₹${action.price.toFixed(2)}`,
+              },
+            })
+          );
+
           markActionExecuted(msgIndex);
         } else {
-          alert(`❌ Order failed: ${data.message}`);
+          alert(`Order failed: ${data.message}`);
         }
       } else if (action.type === "INVEST") {
         let successCount = 0;
@@ -179,15 +199,25 @@ function AIChat() {
         }
 
         if (successCount > 0) {
-          alert(`✅ Portfolio Allocation Successful!\nPlaced orders for:\n${logs.join("\n")}`);
+          alert(`Portfolio Allocation Successful!\nPlaced orders for:\n${logs.join("\n")}`);
+          
+          // Dispatch notification
+          window.dispatchEvent(
+            new CustomEvent("new-notification", {
+              detail: {
+                message: `AI Basket Order: Successfully invested in ${successCount} asset(s)`,
+              },
+            })
+          );
+
           markActionExecuted(msgIndex);
         } else {
-          alert("❌ Portfolio allocation failed. Check if you have sufficient cash.");
+          alert("Portfolio allocation failed. Check if you have sufficient cash.");
         }
       }
     } catch (err) {
       console.error(err);
-      alert("❌ Trade execution failed due to a network error.");
+      alert("Trade execution failed due to a network error.");
     }
   }
 
