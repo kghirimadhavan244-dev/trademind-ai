@@ -44,7 +44,7 @@ function Home() {
             <Brain className="w-3.5 h-3.5" /> Next-Gen AI Investment Companion
           </span>
 
-          <h1 className="mt-8 text-5xl md:text-7xl font-black tracking-tight leading-[1.1] text-slate-900 dark:text-white">
+          <h1 className="mt-8 text-4xl sm:text-5xl md:text-7xl font-black tracking-tight leading-[1.1] text-slate-900 dark:text-white">
             Research Smarter.<br />
             <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 bg-clip-text text-transparent dark:from-blue-400 dark:via-indigo-400 dark:to-emerald-400">
               Practice Trading Risk-Free.

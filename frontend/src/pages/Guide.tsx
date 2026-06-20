@@ -62,23 +62,23 @@ export default function Guide() {
         {/* Desktop Sidebar & Grid Content */}
         <div className="grid gap-10 lg:grid-cols-4 items-start">
           
-          {/* Quick Navigation Sidebar */}
-          <div className="lg:col-span-1 lg:sticky lg:top-24 space-y-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 px-2">Table of Contents</h3>
-            <nav className="flex flex-col gap-1.5">
+          {/* Quick Navigation Sidebar / Swipe bar on Mobile */}
+          <div className="lg:col-span-1 lg:sticky lg:top-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 lg:p-5 rounded-2xl lg:rounded-3xl shadow-sm overflow-x-auto lg:overflow-visible">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 lg:mb-4 px-2 hidden lg:block">Table of Contents</h3>
+            <nav className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible pb-1.5 lg:pb-0 scrollbar-none">
               {SECTIONS.map((sec) => {
                 const Icon = sec.icon;
                 return (
                   <button
                     key={sec.id}
                     onClick={() => scrollToSection(sec.id)}
-                    className={`flex items-center gap-3 px-4 py-3 text-xs font-bold rounded-2xl transition-all cursor-pointer text-left ${
+                    className={`flex items-center gap-2 lg:gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 text-[11px] lg:text-xs font-bold rounded-xl lg:rounded-2xl transition-all cursor-pointer whitespace-nowrap shrink-0 text-left ${
                       activeSection === sec.id
                         ? "bg-blue-600 text-white shadow-md shadow-blue-500/25"
                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
+                    <Icon className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0" />
                     {sec.label}
                   </button>
                 );
