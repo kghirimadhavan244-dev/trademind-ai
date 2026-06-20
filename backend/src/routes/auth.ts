@@ -56,7 +56,6 @@ router.post("/send-otp", async (req, res) => {
     return res.json({
       success: true,
       message: "OTP sent successfully.",
-      otp, // Return the OTP in the response for demo/testing convenience
     });
   } catch (error) {
     console.error(error);
@@ -398,7 +397,6 @@ router.post("/forgot-password", async (req, res) => {
     return res.json({
       success: true,
       message: "Password reset OTP sent to email.",
-      otp, // Return the OTP in the response for demo/testing convenience
     });
   } catch (error) {
     console.error(error);
