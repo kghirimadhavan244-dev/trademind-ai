@@ -169,10 +169,71 @@ Schema:
 router.post("/execute-auto", async (req, res) => {
     try {
         const { userId, signal } = req.body;
-        if (!userId || !signal) {
+        if (!userId) {
             return res.status(400).json({
                 success: false,
-                message: "Missing required fields.",
+                message: "User ID is required.",
+            });
+        }
+        const riskLogs = [];
+        // 1. Run Risk Management Engine on existing holdings (Take-Profit & Stop-Loss check)
+        try {
+            const holdings = await prisma_1.default.holding.findMany({
+                where: { userId: Number(userId) },
+            });
+            for (const holding of holdings) {
+                try {
+                    const quote = await (0, marketService_1.fetchStockQuote)(holding.symbol);
+                    if (quote && quote.c) {
+                        const currentPrice = quote.c;
+                        const yieldPct = ((currentPrice - holding.buyPrice) / holding.buyPrice) * 100;
+                        // Take Profit >= 5.0% or Stop Loss <= -3.0%
+                        if (yieldPct >= 5.0 || yieldPct <= -3.0) {
+                            const proceeds = holding.quantity * currentPrice;
+                            // Liquidate holding
+                            await prisma_1.default.holding.delete({
+                                where: { id: holding.id },
+                            });
+                            // Increment user cash
+                            await prisma_1.default.user.update({
+                                where: { id: Number(userId) },
+                                data: {
+                                    cash: {
+                                        increment: proceeds,
+                                    },
+                                },
+                            });
+                            // Create transaction record
+                            await prisma_1.default.transaction.create({
+                                data: {
+                                    userId: Number(userId),
+                                    type: "SELL",
+                                    symbol: holding.symbol.toUpperCase(),
+                                    quantity: holding.quantity,
+                                    price: currentPrice,
+                                },
+                            });
+                            const typeLabel = yieldPct >= 5.0 ? "Take-Profit" : "Stop-Loss";
+                            const logEntry = `[Autopilot Risk Engine] ${typeLabel} triggered for ${holding.symbol}. Sold ${holding.quantity} shares at ₹${currentPrice.toFixed(2)} (${yieldPct >= 0 ? "+" : ""}${yieldPct.toFixed(2)}%).`;
+                            riskLogs.push(logEntry);
+                        }
+                    }
+                }
+                catch (quoteErr) {
+                    console.error(`Failed to execute risk scan for holding ${holding.symbol}:`, quoteErr);
+                }
+            }
+        }
+        catch (riskErr) {
+            console.error("Autopilot Risk Engine failure:", riskErr);
+        }
+        // 2. Process the scanned signal if provided
+        if (!signal) {
+            return res.json({
+                success: true,
+                tradeExecuted: false,
+                log: "AI Pilot monitoring current market channels.",
+                riskLogs,
             });
         }
         const { symbol, type, entry } = signal;
@@ -180,7 +241,8 @@ router.post("/execute-auto", async (req, res) => {
             return res.json({
                 success: true,
                 tradeExecuted: false,
-                log: `AI Pilot observed ${symbol} consolidating. Decision: HOLD, no transaction executed.`
+                log: `AI Pilot observed ${symbol} consolidating. Decision: HOLD, no transaction executed.`,
+                riskLogs,
             });
         }
         // Determine a random quantity between 5 and 50 shares
@@ -201,7 +263,8 @@ router.post("/execute-auto", async (req, res) => {
                 return res.json({
                     success: true,
                     tradeExecuted: false,
-                    log: `AI Pilot tried to BUY ${qty} shares of ${symbol} at ₹${price.toFixed(2)}, but virtual cash balance is insufficient (Needed: ₹${cost.toLocaleString("en-IN")}, Available: ₹${user.cash.toLocaleString("en-IN")}).`
+                    log: `AI Pilot tried to BUY ${qty} shares of ${symbol} at ₹${price.toFixed(2)}, but virtual cash balance is insufficient (Needed: ₹${cost.toLocaleString("en-IN")}, Available: ₹${user.cash.toLocaleString("en-IN")}).`,
+                    riskLogs,
                 });
             }
             // Check if holding exists
@@ -254,7 +317,8 @@ router.post("/execute-auto", async (req, res) => {
             return res.json({
                 success: true,
                 tradeExecuted: true,
-                log: `[Autopilot] BUY: Purchased ${qty} shares of ${symbol} at ₹${price.toFixed(2)} (Total Value: ₹${cost.toLocaleString("en-IN")}).`
+                log: `[Autopilot] BUY: Purchased ${qty} shares of ${symbol} at ₹${price.toFixed(2)} (Total Value: ₹${cost.toLocaleString("en-IN")}).`,
+                riskLogs,
             });
         }
         else if (type === "SELL") {
@@ -269,7 +333,8 @@ router.post("/execute-auto", async (req, res) => {
                 return res.json({
                     success: true,
                     tradeExecuted: false,
-                    log: `AI Pilot generated a SELL signal for ${symbol}, but you have no holdings to liquidate.`
+                    log: `AI Pilot generated a SELL signal for ${symbol}, but you have no holdings to liquidate.`,
+                    riskLogs,
                 });
             }
             // Sell the smaller of holding quantity or the signal quantity
@@ -312,13 +377,15 @@ router.post("/execute-auto", async (req, res) => {
             return res.json({
                 success: true,
                 tradeExecuted: true,
-                log: `[Autopilot] SELL: Liquidated ${sellQty} shares of ${symbol} at ₹${price.toFixed(2)} (Total proceeds added: ₹${proceeds.toLocaleString("en-IN")}).`
+                log: `[Autopilot] SELL: Liquidated ${sellQty} shares of ${symbol} at ₹${price.toFixed(2)} (Total proceeds added: ₹${proceeds.toLocaleString("en-IN")}).`,
+                riskLogs,
             });
         }
         return res.json({
             success: true,
             tradeExecuted: false,
-            log: "AI Pilot is monitoring current market channels."
+            log: "AI Pilot is monitoring current market channels.",
+            riskLogs,
         });
     }
     catch (error) {

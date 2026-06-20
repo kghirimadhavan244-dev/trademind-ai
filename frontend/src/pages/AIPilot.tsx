@@ -196,16 +196,13 @@ function AIPilot() {
       
       // Auto execution timer: execute a trade every 15 seconds
       autopilotTimerRef.current = setInterval(async () => {
-        if (signals.length === 0 || !user) return;
+        if (!user) return;
         
         const activeSignals = signals.filter(s => s.type !== "HOLD");
-        if (activeSignals.length === 0) {
-          addLog("[Autopilot] Check: No active signals detected to trade.");
-          return;
-        }
-
-        // Pick a random signal to simulate
-        const randomSignal = activeSignals[Math.floor(Math.random() * activeSignals.length)];
+        // Pick a random signal if available, otherwise run with no signal to evaluate Risk Engine
+        const randomSignal = activeSignals.length > 0
+          ? activeSignals[Math.floor(Math.random() * activeSignals.length)]
+          : undefined;
         
         try {
           const res = await fetch(`${API_BASE_URL}/api/ai-pilot/execute-auto`, {
@@ -220,11 +217,25 @@ function AIPilot() {
           });
           const data = await res.json();
           if (data.success) {
-            addLog(data.log);
+            if (data.log) {
+              addLog(data.log);
+            }
+            if (data.riskLogs && Array.isArray(data.riskLogs)) {
+              data.riskLogs.forEach((riskLog: string) => {
+                addLog(riskLog);
+                window.dispatchEvent(
+                  new CustomEvent("new-notification", {
+                    detail: {
+                      message: riskLog,
+                    },
+                  })
+                );
+              });
+            }
             loadPortfolio(); // refresh holdings list
             
             // Dispatch notification on successful transaction
-            if (data.tradeExecuted) {
+            if (data.tradeExecuted && data.log) {
               window.dispatchEvent(
                 new CustomEvent("new-notification", {
                   detail: {
@@ -323,17 +334,33 @@ function AIPilot() {
       });
       const data = await res.json();
       if (data.success) {
-        addLog(data.log);
+        if (data.log) {
+          addLog(data.log);
+        }
+        if (data.riskLogs && Array.isArray(data.riskLogs)) {
+          data.riskLogs.forEach((riskLog: string) => {
+            addLog(riskLog);
+            window.dispatchEvent(
+              new CustomEvent("new-notification", {
+                detail: {
+                  message: riskLog,
+                },
+              })
+            );
+          });
+        }
         loadPortfolio();
         
         // Dispatch window notification event
-        window.dispatchEvent(
-          new CustomEvent("new-notification", {
-            detail: {
-              message: data.log,
-            },
-          })
-        );
+        if (data.tradeExecuted && data.log) {
+          window.dispatchEvent(
+            new CustomEvent("new-notification", {
+              detail: {
+                message: data.log,
+              },
+            })
+          );
+        }
       } else {
         alert(data.message || "Failed to execute order.");
       }
