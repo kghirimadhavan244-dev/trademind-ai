@@ -130,7 +130,17 @@ function AIPilot() {
       if (data.success) {
         setSignals(data.signals);
         setSource(data.source);
-        addLog(`[Scanner] Scan completed successfully via ${data.source}. Found ${data.signals.filter((s: any) => s.type !== "HOLD").length} active trade setups.`);
+        const activeCount = data.signals.filter((s: any) => s.type !== "HOLD").length;
+        addLog(`[Scanner] Scan completed successfully via ${data.source}. Found ${activeCount} active trade setups.`);
+        
+        // Dispatch window notification event
+        window.dispatchEvent(
+          new CustomEvent("new-notification", {
+            detail: {
+              message: `AI Market Scan completed via ${data.source}. Found ${activeCount} active trade setups.`,
+            },
+          })
+        );
       } else {
         addLog("[Scanner] Scan failed. Server returned error.");
       }
@@ -176,6 +186,13 @@ function AIPilot() {
   useEffect(() => {
     if (autopilot) {
       addLog(`[Autopilot] ACTIVATED. Capital buffer configured to ₹${Number(deployCapital).toLocaleString("en-IN")}.`);
+      window.dispatchEvent(
+        new CustomEvent("new-notification", {
+          detail: {
+            message: `AI Autopilot Activated with capital buffer of ₹${Number(deployCapital).toLocaleString("en-IN")}.`,
+          },
+        })
+      );
       
       // Auto execution timer: execute a trade every 15 seconds
       autopilotTimerRef.current = setInterval(async () => {
@@ -205,6 +222,17 @@ function AIPilot() {
           if (data.success) {
             addLog(data.log);
             loadPortfolio(); // refresh holdings list
+            
+            // Dispatch notification on successful transaction
+            if (data.tradeExecuted) {
+              window.dispatchEvent(
+                new CustomEvent("new-notification", {
+                  detail: {
+                    message: data.log,
+                  },
+                })
+              );
+            }
           }
         } catch (err) {
           console.error(err);
@@ -215,6 +243,13 @@ function AIPilot() {
       if (autopilotTimerRef.current) {
         clearInterval(autopilotTimerRef.current);
         addLog("[Autopilot] DEACTIVATED. Switched to manual override.");
+        window.dispatchEvent(
+          new CustomEvent("new-notification", {
+            detail: {
+              message: "AI Autopilot Deactivated. Switched to manual override.",
+            },
+          })
+        );
       }
     }
 
@@ -248,6 +283,15 @@ function AIPilot() {
           metrics: data.metrics,
           chartData: data.chartData,
         });
+        
+        // Dispatch window notification event
+        window.dispatchEvent(
+          new CustomEvent("new-notification", {
+            detail: {
+              message: `AI Backtest complete for ${backtestSymbol} using ${backtestStrategy}. Yield: ${data.metrics.totalReturn}%.`,
+            },
+          })
+        );
       } else {
         alert(data.message || "Failed to compile backtest calculations.");
       }
@@ -280,8 +324,16 @@ function AIPilot() {
       const data = await res.json();
       if (data.success) {
         addLog(data.log);
-        alert(data.log);
         loadPortfolio();
+        
+        // Dispatch window notification event
+        window.dispatchEvent(
+          new CustomEvent("new-notification", {
+            detail: {
+              message: data.log,
+            },
+          })
+        );
       } else {
         alert(data.message || "Failed to execute order.");
       }
@@ -680,7 +732,19 @@ function AIPilot() {
                 </span>
 
                 <button
-                  onClick={() => setStrategyActive(!strategyActive)}
+                  onClick={() => {
+                    const nextState = !strategyActive;
+                    setStrategyActive(nextState);
+                    window.dispatchEvent(
+                      new CustomEvent("new-notification", {
+                        detail: {
+                          message: nextState 
+                            ? `Strategy Mode Activated: Running ${selectedStrategy} algorithm.` 
+                            : `Strategy Mode Deactivated. Switched to manual override.`,
+                        },
+                      })
+                    );
+                  }}
                   className={`rounded-full p-1.5 w-14 transition-colors duration-300 flex ${
                     strategyActive ? "bg-emerald-500 justify-end" : "bg-slate-300 dark:bg-slate-800 justify-start"
                   } cursor-pointer`}
