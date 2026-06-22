@@ -295,4 +295,42 @@ router.get("/summary/:userId", async (req, res) => {
         });
     }
 });
+/**
+ * Reset Paper Account
+ */
+router.post("/reset", async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "User ID is required.",
+            });
+        }
+        // Reset user cash to 1,000,000
+        await prisma_1.default.user.update({
+            where: { id: Number(userId) },
+            data: { cash: 1000000 },
+        });
+        // Delete all holdings for this user
+        await prisma_1.default.holding.deleteMany({
+            where: { userId: Number(userId) },
+        });
+        // Delete all transactions for this user
+        await prisma_1.default.transaction.deleteMany({
+            where: { userId: Number(userId) },
+        });
+        return res.json({
+            success: true,
+            message: "Paper trading account reset successfully. Cash set to ₹10,00,000.",
+        });
+    }
+    catch (error) {
+        console.error("Failed to reset paper account:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to reset paper account.",
+        });
+    }
+});
 exports.default = router;

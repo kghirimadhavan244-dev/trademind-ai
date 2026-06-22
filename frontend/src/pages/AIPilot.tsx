@@ -83,6 +83,8 @@ function AIPilot() {
   const [source, setSource] = useState("AI Quantitative Engine");
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [cash, setCash] = useState<number>(0);
+  const [takeProfit, setTakeProfit] = useState("5.0");
+  const [stopLoss, setStopLoss] = useState("-3.0");
 
   // Strategy Tab States
   const [selectedStrategy, setSelectedStrategy] = useState("RSI");
@@ -213,6 +215,8 @@ function AIPilot() {
             body: JSON.stringify({
               userId: user.id,
               signal: randomSignal,
+              takeProfit: parseFloat(takeProfit) || 5.0,
+              stopLoss: parseFloat(stopLoss) || -3.0,
             }),
           });
           const data = await res.json();
@@ -269,7 +273,7 @@ function AIPilot() {
         clearInterval(autopilotTimerRef.current);
       }
     };
-  }, [autopilot, signals]);
+  }, [autopilot, signals, takeProfit, stopLoss]);
 
   // Trigger historical backtest
   async function runBacktestSimulation() {
@@ -330,6 +334,8 @@ function AIPilot() {
         body: JSON.stringify({
           userId: user.id,
           signal,
+          takeProfit: parseFloat(takeProfit) || 5.0,
+          stopLoss: parseFloat(stopLoss) || -3.0,
         }),
       });
       const data = await res.json();
@@ -367,6 +373,50 @@ function AIPilot() {
     } catch (err) {
       console.error(err);
       alert("Failed to deploy order. Check console logs.");
+    }
+  }
+
+  // Reset paper trading account
+  async function resetPaperAccount() {
+    if (!user) return;
+    if (!window.confirm("Are you sure you want to reset your paper account? This will clear all holdings, transaction history, and reset your cash to ₹10,00,000.")) {
+      return;
+    }
+
+    addLog("[System] Initiating paper trading account reset...");
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/paper/reset`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setLogs([
+          "System Reset Completed. AI Autopilot standby...",
+          "Paper trading balance restored to ₹10,00,000."
+        ]);
+        setCash(1000000);
+        setHoldings([]);
+        
+        window.dispatchEvent(
+          new CustomEvent("new-notification", {
+            detail: {
+              message: "Paper Trading Account Reset: Cash set to ₹10,00,000.",
+            },
+          })
+        );
+      } else {
+        alert(data.message || "Failed to reset paper account.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to reset paper account. Check network logs.");
     }
   }
 
@@ -458,6 +508,32 @@ function AIPilot() {
                       className="w-full mt-1.5 rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm outline-none focus:border-blue-500 font-bold"
                     />
                   </div>
+
+                  {/* Take Profit & Stop Loss Thresholds */}
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Take Profit (%)</label>
+                      <input 
+                        type="number"
+                        step="0.1"
+                        value={takeProfit}
+                        onChange={(e) => setTakeProfit(e.target.value)}
+                        disabled={autopilot}
+                        className="w-full mt-1.5 rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-blue-500 font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Stop Loss (%)</label>
+                      <input 
+                        type="number"
+                        step="0.1"
+                        value={stopLoss}
+                        onChange={(e) => setStopLoss(e.target.value)}
+                        disabled={autopilot}
+                        className="w-full mt-1.5 rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-blue-500 font-bold"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-6 flex items-center justify-between border-t border-slate-100 dark:border-slate-850 pt-4">
@@ -515,14 +591,23 @@ function AIPilot() {
                   </p>
                 </div>
 
-                <div className="mt-6 border-t border-slate-100 dark:border-slate-850 pt-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center">
-                    Available Cash
-                    <HelpTip content="Virtual funds available in your account to deploy for AI-piloted trade executions." />
-                  </span>
-                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
-                    ₹{cash.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                  </span>
+                <div className="mt-6 border-t border-slate-100 dark:border-slate-850 pt-4 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center">
+                      Available Cash
+                      <HelpTip content="Virtual funds available in your account to deploy for AI-piloted trade executions." />
+                    </span>
+                    <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
+                      ₹{cash.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={resetPaperAccount}
+                    className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/10 dark:bg-red-950/10 hover:bg-red-50/30 text-red-600 dark:text-red-400 font-bold px-3 py-1.5 text-xs transition cursor-pointer"
+                  >
+                    Reset Account
+                  </button>
                 </div>
               </div>
             </div>

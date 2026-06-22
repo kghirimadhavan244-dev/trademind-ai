@@ -168,7 +168,7 @@ Schema:
  */
 router.post("/execute-auto", async (req, res) => {
     try {
-        const { userId, signal } = req.body;
+        const { userId, signal, takeProfit = 5.0, stopLoss = -3.0 } = req.body;
         if (!userId) {
             return res.status(400).json({
                 success: false,
@@ -176,6 +176,8 @@ router.post("/execute-auto", async (req, res) => {
             });
         }
         const riskLogs = [];
+        const tpThreshold = Number(takeProfit);
+        const slThreshold = Number(stopLoss) > 0 ? -Number(stopLoss) : Number(stopLoss);
         // 1. Run Risk Management Engine on existing holdings (Take-Profit & Stop-Loss check)
         try {
             const holdings = await prisma_1.default.holding.findMany({
@@ -187,8 +189,8 @@ router.post("/execute-auto", async (req, res) => {
                     if (quote && quote.c) {
                         const currentPrice = quote.c;
                         const yieldPct = ((currentPrice - holding.buyPrice) / holding.buyPrice) * 100;
-                        // Take Profit >= 5.0% or Stop Loss <= -3.0%
-                        if (yieldPct >= 5.0 || yieldPct <= -3.0) {
+                        // Take Profit >= tpThreshold or Stop Loss <= slThreshold
+                        if (yieldPct >= tpThreshold || yieldPct <= slThreshold) {
                             const proceeds = holding.quantity * currentPrice;
                             // Liquidate holding
                             await prisma_1.default.holding.delete({
@@ -213,7 +215,7 @@ router.post("/execute-auto", async (req, res) => {
                                     price: currentPrice,
                                 },
                             });
-                            const typeLabel = yieldPct >= 5.0 ? "Take-Profit" : "Stop-Loss";
+                            const typeLabel = yieldPct >= tpThreshold ? "Take-Profit" : "Stop-Loss";
                             const logEntry = `[Autopilot Risk Engine] ${typeLabel} triggered for ${holding.symbol}. Sold ${holding.quantity} shares at ₹${currentPrice.toFixed(2)} (${yieldPct >= 0 ? "+" : ""}${yieldPct.toFixed(2)}%).`;
                             riskLogs.push(logEntry);
                         }
