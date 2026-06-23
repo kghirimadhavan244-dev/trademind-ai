@@ -2,6 +2,7 @@ import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import Navbar from "../components/layout/Navbar";
 import HelpTip from "../components/common/HelpTip";
+import { useBeginnerMode } from "../hooks/useBeginnerMode";
 
 type PortfolioSummary = {
   cash: number;
@@ -10,6 +11,7 @@ type PortfolioSummary = {
 };
 
 function PortfolioAI() {
+  const { isBeginner } = useBeginnerMode();
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,7 +24,7 @@ function PortfolioAI() {
     setAnalysis(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/portfolio-ai/${user.id}`);
+      const res = await fetch(`${API_BASE_URL}/api/portfolio-ai/${user.id}?beginner=${isBeginner}`);
       const data = await res.json();
       if (data.success) {
         setAnalysis(data.analysis);
@@ -32,14 +34,14 @@ function PortfolioAI() {
       }
     } catch (err) {
       console.error(err);
-      setAnalysis("❌ Failed to connect to server. Ensure your backend is running on ${API_BASE_URL}");
+      setAnalysis(`❌ Failed to connect to server. Ensure your backend is running on ${API_BASE_URL}`);
     }
     setLoading(false);
   }
 
   useEffect(() => {
     loadPortfolioAnalysis();
-  }, []);
+  }, [isBeginner]);
 
   const cashPercent = summary && summary.totalValue > 0
     ? (summary.cash / summary.totalValue) * 100

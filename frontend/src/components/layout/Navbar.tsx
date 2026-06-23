@@ -3,6 +3,7 @@ import { API_BASE_URL } from "../../config";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Sun, Moon, Bell, User, Menu, X } from "lucide-react";
+import { useBeginnerMode } from "../../hooks/useBeginnerMode";
 
 type TickerItem = {
   symbol: string;
@@ -19,6 +20,7 @@ type AppNotification = {
 
 function Navbar() {
   const navigate = useNavigate();
+  const { isBeginner, toggleBeginnerMode } = useBeginnerMode();
 
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -257,6 +259,22 @@ function Navbar() {
 
         {/* Right Side Actions */}
         <div className="flex items-center gap-3">
+          {/* Beginner/Pro Mode Toggle */}
+          {token && (
+            <button
+              onClick={toggleBeginnerMode}
+              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border transition text-xs font-bold shadow-sm cursor-pointer ${
+                isBeginner
+                  ? "bg-emerald-500/10 text-emerald-650 border-emerald-500/20 dark:bg-emerald-550/20 dark:text-emerald-400 dark:border-emerald-500/30"
+                  : "bg-blue-500/10 text-blue-650 border-blue-500/20 dark:bg-blue-550/20 dark:text-blue-400 dark:border-blue-500/30"
+              }`}
+              title="Switch between Beginner (jargon-free, tooltips) and Pro mode"
+            >
+              <span className={`w-2 h-2 rounded-full ${isBeginner ? "bg-emerald-500 animate-pulse" : "bg-blue-500"}`}></span>
+              <span>{isBeginner ? "Beginner" : "Pro Mode"}</span>
+            </button>
+          )}
+
           {/* Notifications Bell (Desktop/Mobile) */}
           {token && (
             <div className="relative">

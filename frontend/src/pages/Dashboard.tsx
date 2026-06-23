@@ -11,8 +11,11 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  Legend 
+  Legend,
+  AreaChart,
+  Area
 } from "recharts";
+
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -21,17 +24,21 @@ import {
   Layers, 
   Coins,
   Bookmark,
-  Newspaper 
+  Newspaper,
+  Smile,
+  Info
 } from "lucide-react";
+
 import Navbar from "../components/layout/Navbar";
 import HelpTip from "../components/common/HelpTip";
+import { useBeginnerMode } from "../hooks/useBeginnerMode";
 
 type Holding = {
   id: number;
   symbol: string;
   quantity: number;
   buyPrice: number;
-  currentPrice: number; // Injected by backend
+  currentPrice: number;
 };
 
 type WatchlistItem = {
@@ -44,6 +51,12 @@ type NewsArticle = {
   description: string;
   url: string;
   source: { name: string };
+};
+
+type TickerItem = {
+  symbol: string;
+  price: number;
+  change: number;
 };
 
 const stockSectors: Record<string, string> = {
@@ -63,14 +76,98 @@ const stockSectors: Record<string, string> = {
 const PIE_COLORS = ["#3b82f6", "#10b981"]; // Equity (blue), Cash (emerald)
 const BAR_COLORS = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ec4899", "#14b8a6"];
 
+// Sparkline component using Recharts AreaChart
+function Sparkline({ data, isPositive }: { data: { date: string; price: number }[]; isPositive: boolean }) {
+  if (!data || data.length === 0) {
+    return <div className="h-8 w-20 flex items-center justify-center text-[10px] text-slate-400">Loading...</div>;
+  }
+  return (
+    <div className="h-8 w-20">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id={`colorSpark-${isPositive ? "green" : "red"}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={isPositive ? "#10b981" : "#ef4444"} stopOpacity={0.2}/>
+              <stop offset="95%" stopColor={isPositive ? "#10b981" : "#ef4444"} stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="price"
+            stroke={isPositive ? "#10b981" : "#ef4444"}
+            strokeWidth={1.5}
+            fillOpacity={1}
+            fill={`url(#colorSpark-${isPositive ? "green" : "red"})`}
+            dot={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// Custom radial Portfolio Health Score Circle
+function HealthScoreCircle({ score }: { score: number }) {
+  const radius = 38;
+  const strokeWidth = 7;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (score / 100) * circumference;
+
+  let colorClass = "stroke-rose-500";
+  if (score >= 80) {
+    colorClass = "stroke-emerald-500";
+  } else if (score >= 60) {
+    colorClass = "stroke-amber-500";
+  }
+
+  return (
+    <div className="relative flex items-center justify-center w-24 h-24">
+      <svg className="w-full h-full transform -rotate-90">
+        <circle
+          cx="48"
+          cy="48"
+          r={radius}
+          className="stroke-slate-100 dark:stroke-slate-800 fill-none"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx="48"
+          cy="48"
+          r={radius}
+          className={`fill-none transition-all duration-1000 ease-out ${colorClass}`}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center justify-center">
+        <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{score}</span>
+        <span className="text-[9px] uppercase font-bold text-slate-400 mt-1">Health</span>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard() {
   const navigate = useNavigate();
+  const { isBeginner } = useBeginnerMode();
 
   const [cash, setCash] = useState(0);
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Daily AI Brief state
+  const [brief, setBrief] = useState<string | null>(null);
+  const [briefLoading, setBriefLoading] = useState(false);
+  const [marketMood, setMarketMood] = useState<string>("Neutral");
+  const [niftyChange, setNiftyChange] = useState<number>(0);
+
+  // Sparkline histories state
+  const [indexHistory, setIndexHistory] = useState<Record<string, { date: string; price: number }[]>>({});
+  const [marketIndices, setMarketIndices] = useState<TickerItem[]>([]);
 
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
@@ -91,14 +188,24 @@ function Dashboard() {
       const watchRes = await fetch(`${API_BASE_URL}/api/watchlist/${user.id}`);
       const watchData = await watchRes.json();
       if (watchData.success) {
-        setWatchlist(watchData.items.slice(0, 5)); // show top 5
+        setWatchlist(watchData.items.slice(0, 5));
       }
 
       // 3. Fetch news
       const newsRes = await fetch(`${API_BASE_URL}/api/news`);
       const newsData = await newsRes.json();
       if (newsData.success) {
-        setNews(newsData.articles.slice(0, 4)); // show top 4
+        setNews(newsData.articles.slice(0, 4));
+      }
+
+      // 4. Fetch live market indices
+      const marketsRes = await fetch(`${API_BASE_URL}/api/markets`);
+      const marketsData = await marketsRes.json();
+      if (marketsData.success) {
+        const indices = marketsData.data.filter((item: TickerItem) =>
+          ["NIFTY50", "SENSEX", "BANKNIFTY"].includes(item.symbol)
+        );
+        setMarketIndices(indices);
       }
     } catch (error) {
       console.error("Error loading dashboard data:", error);
@@ -106,8 +213,41 @@ function Dashboard() {
     setLoading(false);
   }
 
+  async function loadIndexHistory(symbol: string) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/markets/history/${symbol}?timeframe=1W`);
+      const data = await res.json();
+      if (data.success) {
+        setIndexHistory(prev => ({ ...prev, [symbol]: data.data }));
+      }
+    } catch (error) {
+      console.error(`Error loading history for ${symbol}:`, error);
+    }
+  }
+
+  async function loadDailyBrief() {
+    if (!user) return;
+    setBriefLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/portfolio-ai/brief/${user.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setBrief(data.brief);
+        setMarketMood(data.marketMood);
+        setNiftyChange(data.niftyChange);
+      }
+    } catch (error) {
+      console.error("Error loading daily brief:", error);
+    }
+    setBriefLoading(false);
+  }
+
   useEffect(() => {
     loadDashboardData();
+    loadDailyBrief();
+    loadIndexHistory("NIFTY50");
+    loadIndexHistory("SENSEX");
+    loadIndexHistory("BANKNIFTY");
   }, []);
 
   // 1. Portfolio Calculations
@@ -117,13 +257,68 @@ function Dashboard() {
   const netGainLoss = totalHoldingsValue - totalHoldingsCost;
   const netGainLossPercent = totalHoldingsCost > 0 ? (netGainLoss / totalHoldingsCost) * 100 : 0;
 
-  // 2. Recharts Asset Allocation Data
+  // Sector count & HHI
+  const sectors = new Set(holdings.map(h => stockSectors[h.symbol] || "Other"));
+  const sectorCount = sectors.size;
+  
+  let hhi = 0;
+  if (totalHoldingsValue > 0) {
+    holdings.forEach(h => {
+      const weight = (h.quantity * h.currentPrice) / totalHoldingsValue;
+      hhi += weight * weight;
+    });
+  }
+
+  // Calculate Health Score (0-100)
+  const healthScore = calculateHealthScore(cash, holdings);
+
+  function calculateHealthScore(cashAmount: number, holdingsList: Holding[]) {
+    if (holdingsList.length === 0) return 100;
+    const totHoldingsVal = holdingsList.reduce((sum, h) => sum + h.quantity * h.currentPrice, 0);
+    const totPortVal = cashAmount + totHoldingsVal;
+    if (totPortVal === 0) return 100;
+
+    // 1. Sector count score (Max 45)
+    const sectorSet = new Set(holdingsList.map(h => stockSectors[h.symbol] || "Other"));
+    const sectorScore = Math.min(sectorSet.size * 15, 45);
+
+    // 2. Cash Ratio score (Max 20)
+    const cashRatio = cashAmount / totPortVal;
+    let cashScore = 10;
+    if (cashRatio >= 0.1 && cashRatio <= 0.4) {
+      cashScore = 20; // optimal cushion
+    } else if (cashRatio > 0.4 && cashRatio <= 0.7) {
+      cashScore = 15;
+    }
+
+    // 3. Concentration HHI score (Max 35)
+    let sumSqWeights = 0;
+    holdingsList.forEach(h => {
+      const weight = (h.quantity * h.currentPrice) / totHoldingsVal;
+      sumSqWeights += weight * weight;
+    });
+    let concentrationScore = 5;
+    if (sumSqWeights <= 0.35) {
+      concentrationScore = 35; // highly diversified
+    } else if (sumSqWeights <= 0.6) {
+      concentrationScore = 22; // moderately diversified
+    } else if (sumSqWeights <= 0.8) {
+      concentrationScore = 12; // concentrated
+    }
+
+    return Math.round(sectorScore + cashScore + concentrationScore);
+  }
+
+  // HHI concentration category name
+  const concentrationLabel = hhi <= 0.35 ? "Low" : hhi <= 0.6 ? "Moderate" : "High";
+
+  // Recharts Asset Allocation Data
   const allocationData = [
     { name: "Equities Value", value: parseFloat(totalHoldingsValue.toFixed(2)) },
     { name: "Liquid Cash", value: parseFloat(cash.toFixed(2)) },
   ];
 
-  // 3. Recharts Sector Exposure Data
+  // Recharts Sector Exposure Data
   const sectorMap: Record<string, number> = {};
   holdings.forEach((h) => {
     const sector = stockSectors[h.symbol] || "Other Sectors";
@@ -136,13 +331,37 @@ function Dashboard() {
     value: parseFloat(sectorMap[sector].toFixed(2)),
   }));
 
+  // Market Mood Styling helper
+  const moodColor = marketMood === "Bullish"
+    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25"
+    : marketMood === "Bearish"
+    ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/25"
+    : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25";
+
+  const moodDotColor = marketMood === "Bullish"
+    ? "bg-emerald-500"
+    : marketMood === "Bearish"
+    ? "bg-rose-500"
+    : "bg-amber-500";
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-6 py-10">
+        
+        {/* Beginner Mode active badge banner */}
+        {isBeginner && (
+          <div className="mb-6 flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-400 rounded-2xl px-4 py-3 text-xs font-semibold">
+            <Info className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span>
+              Beginner Mode is enabled. Complex terms will show explaining subtitles, helper tooltips are visible, and the AI Portfolio Advisor will deliver simpler jargon-free reports.
+            </span>
+          </div>
+        )}
+
         {/* Welcome Header */}
-        <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">
               Console Dashboard
@@ -152,23 +371,151 @@ function Dashboard() {
             </p>
           </div>
           <button
-            onClick={loadDashboardData}
-            disabled={loading}
+            onClick={() => {
+              loadDashboardData();
+              loadDailyBrief();
+            }}
+            disabled={loading || briefLoading}
             className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 transition disabled:opacity-50 text-sm shadow-md shadow-blue-500/15 cursor-pointer"
           >
             {loading ? "Refreshing..." : "Sync Market Data"}
           </button>
         </div>
 
+        {/* Live Market Indices row with sparklines */}
+        <div className="grid gap-6 md:grid-cols-3 mb-8">
+          {marketIndices.map((idxItem) => {
+            const history = indexHistory[idxItem.symbol] || [];
+            const isPos = idxItem.change >= 0;
+            return (
+              <div 
+                key={idxItem.symbol}
+                className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm flex items-center justify-between transition hover:shadow-md"
+              >
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    {idxItem.symbol === "NIFTY50" ? "Nifty 50" : idxItem.symbol === "BANKNIFTY" ? "Bank Nifty" : idxItem.symbol}
+                  </span>
+                  <h3 className="mt-1 text-xl font-black text-slate-900 dark:text-white leading-none">
+                    ₹{idxItem.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </h3>
+                  <span className={`mt-1.5 inline-flex items-center text-xs font-bold ${isPos ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                    {isPos ? "▲ +" : "▼ "}
+                    {idxItem.change.toFixed(2)}%
+                  </span>
+                </div>
+                <Sparkline data={history} isPositive={isPos} />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Daily AI Briefing & Portfolio Health Row */}
+        <div className="grid gap-6 lg:grid-cols-3 mb-8">
+          
+          {/* Daily AI Brief Card */}
+          <div className="lg:col-span-2 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Smile className="w-5 h-5 text-blue-500" />
+                  <span>Good Morning, {user?.name ?? "Ghiri"}</span>
+                </h3>
+                
+                {/* Market Mood Badge */}
+                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-bold ${moodColor}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${moodDotColor} ${marketMood !== "Neutral" ? "animate-pulse" : ""}`}></span>
+                  <span>Market Mood: {marketMood}</span>
+                </div>
+              </div>
+
+              {briefLoading ? (
+                <div className="space-y-3 py-4">
+                  <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded w-3/4 animate-pulse"></div>
+                  <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded w-5/6 animate-pulse"></div>
+                </div>
+              ) : brief ? (
+                <p className="text-slate-700 dark:text-slate-350 text-sm leading-relaxed font-medium">
+                  {brief}
+                </p>
+              ) : (
+                <p className="text-slate-400 italic text-xs py-4">
+                  No insight generated. Sync market data or make a trade to trigger an update.
+                </p>
+              )}
+            </div>
+            
+            <div className="mt-4 flex gap-6 text-[11px] font-semibold text-slate-500">
+              <span>Today's NIFTY change: <strong className={niftyChange >= 0 ? "text-emerald-500" : "text-rose-500"}>{niftyChange >= 0 ? "+" : ""}{niftyChange.toFixed(2)}%</strong></span>
+              <span>Portfolio value status: <strong className={netGainLoss >= 0 ? "text-emerald-500" : "text-rose-500"}>{netGainLoss >= 0 ? "+" : ""}{netGainLossPercent.toFixed(2)}%</strong></span>
+            </div>
+          </div>
+
+          {/* Portfolio Health Score Card */}
+          <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400 flex items-center">
+                Portfolio Health
+                <HelpTip content="A score evaluating how balanced your paper portfolio is. It penalizes extreme stock concentration and high cash balances, rewarding clean sector diversification." />
+              </h3>
+              {isBeginner && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Auto-calculated</span>}
+            </div>
+
+            <div className="flex items-center gap-5">
+              <HealthScoreCircle score={healthScore} />
+              
+              <div className="flex-1 space-y-2.5">
+                <div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400 flex items-center">
+                      Sectors Own
+                      <HelpTip content="The number of separate sectors represented in your stock holdings." />
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{sectorCount}</span>
+                  </div>
+                  {isBeginner && <p className="text-[9px] text-slate-550 leading-none mt-0.5">Diversifies your industrial risk exposure.</p>}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400 flex items-center">
+                      Concentration
+                      <HelpTip content="Concentration index (HHI) evaluates if your assets are balanced or unsafely weighted in 1 or 2 stocks." />
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{concentrationLabel}</span>
+                  </div>
+                  {isBeginner && <p className="text-[9px] text-slate-550 leading-none mt-0.5">Lower concentration prevents single stock blowups.</p>}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400 flex items-center">
+                      Cash Ratio
+                      <HelpTip content="The proportion of total portfolio value held in cash. A healthy ratio preserves liquidity." />
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {totalPortfolioValue > 0 ? `${((cash / totalPortfolioValue) * 100).toFixed(0)}%` : "100%"}
+                    </span>
+                  </div>
+                  {isBeginner && <p className="text-[9px] text-slate-550 leading-none mt-0.5">Liquid reserves kept for market entries.</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Analytics Key Metrics Row */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          
+          {/* Total Value */}
           <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-450 flex items-center">
                 Total Portfolio Value
                 <HelpTip content="The combined total worth of your virtual cash and all your stock holdings." />
               </p>
-              <h2 className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-white">
+              {isBeginner && <p className="text-[10px] text-slate-400 mt-0.5">Cash + Stock holdings value</p>}
+              <h2 className="mt-1 text-2xl font-extrabold text-slate-900 dark:text-white">
                 ₹{totalPortfolioValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </h2>
             </div>
@@ -177,13 +524,15 @@ function Dashboard() {
             </div>
           </div>
 
+          {/* Cash */}
           <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-455 flex items-center">
                 Available Liquid Cash
                 <HelpTip content="Virtual funds available in your account to purchase new stock shares." />
               </p>
-              <h2 className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-white">
+              {isBeginner && <p className="text-[10px] text-slate-400 mt-0.5">Idle money ready for buying</p>}
+              <h2 className="mt-1 text-2xl font-extrabold text-slate-900 dark:text-white">
                 ₹{cash.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </h2>
             </div>
@@ -192,13 +541,15 @@ function Dashboard() {
             </div>
           </div>
 
+          {/* Invested Cost */}
           <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-450 flex items-center">
                 Amount Invested
                 <HelpTip content="The total cost value deployed to purchase your current stock shares." />
               </p>
-              <h2 className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-white">
+              {isBeginner && <p className="text-[10px] text-slate-400 mt-0.5">Your capital currently in stocks</p>}
+              <h2 className="mt-1 text-2xl font-extrabold text-slate-900 dark:text-white">
                 ₹{totalHoldingsCost.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </h2>
             </div>
@@ -207,13 +558,15 @@ function Dashboard() {
             </div>
           </div>
 
+          {/* Profit/Loss */}
           <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-450 flex items-center">
                 Net Profit / Loss
                 <HelpTip content="Current net profit or loss generated by your investments." />
               </p>
-              <div className="flex items-center gap-2 mt-2">
+              {isBeginner && <p className="text-[10px] text-slate-400 mt-0.5">Total stock growth performance</p>}
+              <div className="flex items-center gap-2 mt-1">
                 <span className={`text-2xl font-extrabold ${netGainLoss >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                   ₹{netGainLoss.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </span>
@@ -231,12 +584,13 @@ function Dashboard() {
 
         {/* Charts Grid */}
         <div className="mt-8 grid gap-8 md:grid-cols-2">
+          
           {/* Asset Allocation Pie Chart */}
           <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Asset Allocation Breakdown
-                <HelpTip content="Shows how your capital is divided between liquid cash and equity investments." />
-              </h3>
+              <Briefcase className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Asset Allocation Breakdown
+              <HelpTip content="Shows how your capital is divided between liquid cash and equity investments." />
+            </h3>
             {totalPortfolioValue > 0 ? (
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -272,9 +626,9 @@ function Dashboard() {
           {/* Sector Allocation Bar Chart */}
           <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-                <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> Sector Concentration Weights
-                <HelpTip content="Displays the distribution of your stock investments across different industry sectors." />
-              </h3>
+              <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> Sector Concentration Weights
+              <HelpTip content="Displays the distribution of your stock investments across different industry sectors." />
+            </h3>
             {sectorData.length > 0 ? (
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -294,7 +648,7 @@ function Dashboard() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-64 flex items-center justify-center text-slate-400">
+              <div className="h-64 flex items-center justify-center text-slate-400 text-sm">
                 No stock equities purchased yet. Try searching for stocks to paper trade.
               </div>
             )}
@@ -303,18 +657,30 @@ function Dashboard() {
 
         {/* Dashboard Grid Bottom */}
         <div className="mt-8 grid gap-8 lg:grid-cols-3">
-          {/* Quick Actions Panel */}
+          
+          {/* Holdings Section */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Holdings Table */}
             <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
               <h2 className="mb-6 text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-blue-600" /> Equities Portfolio
               </h2>
 
               {holdings.length === 0 ? (
-                <p className="text-slate-500 py-6 text-center">
-                  No active holdings. Navigate to the Search tab to buy your first paper stock.
-                </p>
+                <div className="py-12 px-6 text-center flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/40">
+                  <div className="p-4 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full mb-4">
+                    <TrendingUp className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Start your investing journey</h3>
+                  <p className="mt-2 text-sm text-slate-500 max-w-sm">
+                    Search for prominent Indian stocks (like Reliance, TCS, or HDFC Bank) and make your first paper trade risk-free.
+                  </p>
+                  <button
+                    onClick={() => navigate("/search")}
+                    className="mt-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 text-xs shadow-md shadow-blue-500/10 cursor-pointer transition"
+                  >
+                    Search Stocks
+                  </button>
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -379,21 +745,21 @@ function Dashboard() {
 
                 <button
                   onClick={() => navigate("/search")}
-                  className="rounded-xl border border-slate-350 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold p-3 transition text-center cursor-pointer text-xs"
+                  className="rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold p-3 transition text-center cursor-pointer text-xs text-slate-700 dark:text-slate-350"
                 >
                   Search Stock
                 </button>
 
                 <button
                   onClick={() => navigate("/paper-trading")}
-                  className="rounded-xl border border-slate-350 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold p-3 transition text-center cursor-pointer text-xs"
+                  className="rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold p-3 transition text-center cursor-pointer text-xs text-slate-700 dark:text-slate-350"
                 >
                   Paper Trade
                 </button>
 
                 <button
                   onClick={() => navigate("/watchlist")}
-                  className="rounded-xl border border-slate-350 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold p-3 transition text-center cursor-pointer text-xs"
+                  className="rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold p-3 transition text-center cursor-pointer text-xs text-slate-700 dark:text-slate-350"
                 >
                   Watchlist
                 </button>
@@ -403,6 +769,7 @@ function Dashboard() {
 
           {/* Right Sidebar: Watchlist Quick View & RBI/SEBI News */}
           <div className="space-y-8">
+            
             {/* Watchlist Panel */}
             <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
               <h2 className="mb-4 text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
@@ -411,7 +778,7 @@ function Dashboard() {
 
               {watchlist.length === 0 ? (
                 <div className="text-center py-6">
-                  <p className="text-slate-500 text-sm">Your watchlist is empty.</p>
+                  <p className="text-slate-550 text-sm">Your watchlist is empty.</p>
                   <button
                     onClick={() => navigate("/search")}
                     className="mt-3 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
@@ -424,7 +791,7 @@ function Dashboard() {
                   {watchlist.map((item) => (
                     <div 
                       key={item.id} 
-                      className="py-3.5 flex justify-between items-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/35 px-2 rounded-xl transition"
+                      className="py-3.5 flex justify-between items-center cursor-pointer hover:bg-slate-550/10 dark:hover:bg-slate-800/35 px-2 rounded-xl transition"
                       onClick={() => navigate(`/search?symbol=${item.symbol}`)}
                     >
                       <span className="font-bold text-slate-900 dark:text-white">{item.symbol}</span>
@@ -453,7 +820,7 @@ function Dashboard() {
                       href={item.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="block p-3 border border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 bg-slate-50 dark:bg-slate-800/20 hover:bg-slate-100/30 rounded-2xl transition"
+                      className="block p-3 border border-slate-100 dark:border-slate-850 hover:border-slate-200 dark:hover:border-slate-750 bg-slate-50 dark:bg-slate-900/40 hover:bg-slate-100/30 rounded-2xl transition"
                     >
                       <span className="inline-block text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 mb-1">
                         {item.source.name}
@@ -467,6 +834,7 @@ function Dashboard() {
               )}
             </div>
           </div>
+
         </div>
       </div>
     </div>

@@ -42,11 +42,36 @@ function MarketOverview() {
     loadData();
   }, []);
 
+  const niftyItem = marketData.find((item) => item.symbol === "NIFTY50");
+  const niftyChange = niftyItem && typeof niftyItem.change === "number" ? niftyItem.change : 0;
+
+  let mood = "Neutral";
+  let moodColor = "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25";
+  let moodDot = "bg-amber-500";
+
+  if (niftyChange > 0.5) {
+    mood = "Bullish";
+    moodColor = "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25";
+    moodDot = "bg-emerald-500";
+  } else if (niftyChange < -0.5) {
+    mood = "Bearish";
+    moodColor = "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/25";
+    moodDot = "bg-rose-500";
+  }
+
   return (
     <section className="mx-auto mt-16 max-w-7xl px-6 w-full text-left">
-      <h2 className="mb-6 text-3xl font-bold text-slate-900 dark:text-white">
-        Indian Market Overview
-      </h2>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          Indian Market Overview
+        </h2>
+        {marketData.length > 0 && (
+          <div className={`self-start sm:self-auto flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold shadow-sm transition-colors duration-300 ${moodColor}`}>
+            <span className={`w-2 h-2 rounded-full ${moodDot} ${mood !== "Neutral" ? "animate-pulse" : ""}`}></span>
+            <span>Market Mood: {mood}</span>
+          </div>
+        )}
+      </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {marketData.map((item) => (

@@ -1,4 +1,5 @@
 import { HelpCircle } from "lucide-react";
+import { useBeginnerMode } from "../../hooks/useBeginnerMode";
 
 type Props = {
   content: string;
@@ -6,6 +7,10 @@ type Props = {
 };
 
 export default function HelpTip({ content, position = "top" }: Props) {
+  const { isBeginner } = useBeginnerMode();
+
+  if (!isBeginner) return null;
+
   const positionClasses = {
     top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
     bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
@@ -24,3 +29,4 @@ export default function HelpTip({ content, position = "top" }: Props) {
     </span>
   );
 }
+
