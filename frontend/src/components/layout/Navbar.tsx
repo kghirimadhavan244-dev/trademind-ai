@@ -86,6 +86,34 @@ function Navbar() {
     return () => clearInterval(interval);
   }, []);
 
+  // Load persistent notifications from DB
+  useEffect(() => {
+    if (!user) return;
+    async function fetchNotifications() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/portfolio-ai/notifications/${user.id}`);
+        const data = await res.json();
+        if (data.success) {
+          const mapped: AppNotification[] = data.notifications.map((n: any) => ({
+            id: n.id.toString(),
+            message: n.message,
+            timestamp: new Date(n.createdAt).toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            read: n.read,
+          }));
+          setNotifications(mapped);
+        }
+      } catch (err) {
+        console.error("Failed to load notifications from backend:", err);
+      }
+    }
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 10000); // Poll every 10s
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
   // Listen for custom notifications event
   useEffect(() => {
     function handleNewNotification(e: Event) {
@@ -119,15 +147,18 @@ function Navbar() {
     };
   }, []);
 
-  // Save notifications to localStorage when changed
-  useEffect(() => {
-    localStorage.setItem("app_notifications", JSON.stringify(notifications));
-  }, [notifications]);
-
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  function markAllAsRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  async function markAllAsRead() {
+    if (!user) return;
+    try {
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      await fetch(`${API_BASE_URL}/api/portfolio-ai/notifications/read/${user.id}`, {
+        method: "POST",
+      });
+    } catch (err) {
+      console.error("Failed to clear notifications:", err);
+    }
   }
 
   function handleLogout() {

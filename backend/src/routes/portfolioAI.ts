@@ -226,6 +226,48 @@ Instructions:
   }
 });
 
+// GET /api/portfolio-ai/notifications/:userId
+router.get("/notifications/:userId", async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    const notifications = await prisma.notification.findMany({
+      where: { userId, read: false },
+      orderBy: { createdAt: "desc" },
+    });
+    return res.json({
+      success: true,
+      notifications,
+    });
+  } catch (error) {
+    console.error("Failed to fetch notifications:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch notifications.",
+    });
+  }
+});
+
+// POST /api/portfolio-ai/notifications/read/:userId
+router.post("/notifications/read/:userId", async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    await prisma.notification.updateMany({
+      where: { userId, read: false },
+      data: { read: true },
+    });
+    return res.json({
+      success: true,
+      message: "All notifications marked as read.",
+    });
+  } catch (error) {
+    console.error("Failed to mark notifications as read:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to mark notifications as read.",
+    });
+  }
+});
+
 export default router;
 
 

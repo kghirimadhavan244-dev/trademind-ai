@@ -15,6 +15,7 @@ import newsRoutes from "./routes/news";
 import portfolioAiRouter from "./routes/portfolioAI";
 import aiPilotRouter from "./routes/aiPilot";
 import aiPilotBacktestRouter from "./routes/aiPilotBacktest";
+import { startAutopilotDaemon } from "./services/autopilotDaemon";
 
 const app = express();
 
@@ -51,4 +52,5 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
+  startAutopilotDaemon();
 });

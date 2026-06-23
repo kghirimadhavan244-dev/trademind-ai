@@ -98,7 +98,6 @@ function AIPilot() {
   const [backtestResults, setBacktestResults] = useState<BacktestResults | null>(null);
 
   const user = JSON.parse(localStorage.getItem("user") || "null");
-  const autopilotTimerRef = useRef<any>(null);
   const logsEndRef = useRef<HTMLDivElement | null>(null);
 
   // Simulated Autopilot growth data
@@ -173,107 +172,76 @@ function AIPilot() {
     setLogs((prev) => [...prev, `[${timestamp}] ${message}`]);
   }
 
-  // Load portfolio holdings & signals
+  // Load configuration and data on mount
   useEffect(() => {
+    async function loadConfig() {
+      if (!user) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/ai-pilot/config/${user.id}`);
+        const data = await res.json();
+        if (data.success && data.config) {
+          setAutopilot(data.config.autopilotEnabled);
+          setTakeProfit(data.config.autopilotTakeProfit.toString());
+          setStopLoss(data.config.autopilotStopLoss.toString());
+          setDeployCapital(data.config.autopilotCapital.toString());
+          
+          if (data.config.autopilotEnabled) {
+            addLog("[Autopilot] ACTIVATED. Background trading daemon is active on the server.");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load autopilot config:", err);
+      }
+    }
+
+    loadConfig();
     scanMarket();
     loadPortfolio();
-  }, []);
+  }, [user?.id]);
 
   // Auto-scroll logs
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Autopilot loop simulation
-  useEffect(() => {
-    if (autopilot) {
-      addLog(`[Autopilot] ACTIVATED. Capital buffer configured to ₹${Number(deployCapital).toLocaleString("en-IN")}.`);
-      window.dispatchEvent(
-        new CustomEvent("new-notification", {
-          detail: {
-            message: `AI Autopilot Activated with capital buffer of ₹${Number(deployCapital).toLocaleString("en-IN")}.`,
-          },
-        })
-      );
-      
-      // Auto execution timer: execute a trade every 15 seconds
-      autopilotTimerRef.current = setInterval(async () => {
-        if (!user) return;
-        
-        const activeSignals = signals.filter(s => s.type !== "HOLD");
-        // Pick a random signal if available, otherwise run with no signal to evaluate Risk Engine
-        const randomSignal = activeSignals.length > 0
-          ? activeSignals[Math.floor(Math.random() * activeSignals.length)]
-          : undefined;
-        
-        try {
-          const res = await fetch(`${API_BASE_URL}/api/ai-pilot/execute-auto`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              userId: user.id,
-              signal: randomSignal,
-              takeProfit: parseFloat(takeProfit) || 5.0,
-              stopLoss: parseFloat(stopLoss) || -3.0,
-            }),
-          });
-          const data = await res.json();
-          if (data.success) {
-            if (data.log) {
-              addLog(data.log);
-            }
-            if (data.riskLogs && Array.isArray(data.riskLogs)) {
-              data.riskLogs.forEach((riskLog: string) => {
-                addLog(riskLog);
-                window.dispatchEvent(
-                  new CustomEvent("new-notification", {
-                    detail: {
-                      message: riskLog,
-                    },
-                  })
-                );
-              });
-            }
-            loadPortfolio(); // refresh holdings list
-            
-            // Dispatch notification on successful transaction
-            if (data.tradeExecuted && data.log) {
-              window.dispatchEvent(
-                new CustomEvent("new-notification", {
-                  detail: {
-                    message: data.log,
-                  },
-                })
-              );
-            }
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      }, 15000);
+  // Handle Autopilot Toggle
+  async function handleToggleAutopilot() {
+    if (!user) return;
+    const nextVal = !autopilot;
+    setAutopilot(nextVal);
 
-    } else {
-      if (autopilotTimerRef.current) {
-        clearInterval(autopilotTimerRef.current);
-        addLog("[Autopilot] DEACTIVATED. Switched to manual override.");
-        window.dispatchEvent(
-          new CustomEvent("new-notification", {
-            detail: {
-              message: "AI Autopilot Deactivated. Switched to manual override.",
-            },
-          })
-        );
-      }
+    addLog(nextVal
+      ? `[Autopilot] ACTIVATED. Background trading daemon is now scanning NSE markets on the server.`
+      : `[Autopilot] DEACTIVATED. Switched to manual override.`
+    );
+
+    window.dispatchEvent(
+      new CustomEvent("new-notification", {
+        detail: {
+          message: nextVal
+            ? `AI Autopilot Activated. Background daemon is now executing trades on the server.`
+            : `AI Autopilot Deactivated. Switched to manual override.`,
+        },
+      })
+    );
+
+    try {
+      await fetch(`${API_BASE_URL}/api/ai-pilot/config/${user.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          autopilotEnabled: nextVal,
+          takeProfit: parseFloat(takeProfit) || 5.0,
+          stopLoss: parseFloat(stopLoss) || -3.0,
+          capital: parseFloat(deployCapital) || 50000.0,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to update autopilot config on toggle:", err);
     }
-
-    return () => {
-      if (autopilotTimerRef.current) {
-        clearInterval(autopilotTimerRef.current);
-      }
-    };
-  }, [autopilot, signals, takeProfit, stopLoss]);
+  }
 
   // Trigger historical backtest
   async function runBacktestSimulation() {
@@ -542,7 +510,7 @@ function AIPilot() {
                   </span>
 
                   <button
-                    onClick={() => setAutopilot(!autopilot)}
+                    onClick={handleToggleAutopilot}
                     className={`rounded-full p-1 w-12 transition-colors duration-300 flex ${
                       autopilot ? "bg-emerald-500 justify-end" : "bg-slate-200 dark:bg-slate-800 justify-start"
                     } cursor-pointer`}

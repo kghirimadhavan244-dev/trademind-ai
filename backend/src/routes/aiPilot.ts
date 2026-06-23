@@ -438,4 +438,74 @@ router.post("/execute-auto", async (req, res) => {
   }
 });
 
+// GET /api/ai-pilot/config/:userId
+router.get("/config/:userId", async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        autopilotEnabled: true,
+        autopilotTakeProfit: true,
+        autopilotStopLoss: true,
+        autopilotCapital: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      config: user,
+    });
+  } catch (error) {
+    console.error("Failed to fetch autopilot config:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch autopilot config.",
+    });
+  }
+});
+
+// POST /api/ai-pilot/config/:userId
+router.post("/config/:userId", async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    const { autopilotEnabled, takeProfit, stopLoss, capital } = req.body;
+
+    const updateData: any = {};
+    if (autopilotEnabled !== undefined) updateData.autopilotEnabled = Boolean(autopilotEnabled);
+    if (takeProfit !== undefined) updateData.autopilotTakeProfit = Number(takeProfit);
+    if (stopLoss !== undefined) updateData.autopilotStopLoss = Number(stopLoss);
+    if (capital !== undefined) updateData.autopilotCapital = Number(capital);
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    return res.json({
+      success: true,
+      config: {
+        autopilotEnabled: user.autopilotEnabled,
+        autopilotTakeProfit: user.autopilotTakeProfit,
+        autopilotStopLoss: user.autopilotStopLoss,
+        autopilotCapital: user.autopilotCapital,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to update autopilot config:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update autopilot config.",
+    });
+  }
+});
+
 export default router;
+

@@ -23,10 +23,17 @@ model User {
   timeHorizon        String   @default("Medium (3-5 years)")
   sectorPreference   String   @default("Technology, Finance")
 
+  // AI Autopilot settings (background execution)
+  autopilotEnabled     Boolean  @default(false)
+  autopilotTakeProfit  Float    @default(5.0)
+  autopilotStopLoss    Float    @default(-3.0)
+  autopilotCapital     Float    @default(50000)
+
   // Relations
   holdings     Holding[]
   transactions Transaction[]
-  watchlist Watchlist[]
+  watchlist    Watchlist[]
+  notifications Notification[]
 }
 
 model Holding {
@@ -59,12 +66,22 @@ model EmailVerification {
   expiresAt  DateTime
   verified   Boolean  @default(false)
 }
+
 model Watchlist {
   id      Int    @id @default(autoincrement())
   symbol  String
 
   userId  Int
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  message   String
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 
