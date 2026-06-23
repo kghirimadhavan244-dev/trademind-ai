@@ -398,7 +398,136 @@ router.post("/execute-auto", async (req, res) => {
         });
     }
 });
-// GET /api/ai-pilot/config/:userId
+// GET /api/ai-pilot/profiles/:userId
+router.get("/profiles/:userId", async (req, res) => {
+    try {
+        const userId = Number(req.params.userId);
+        const profiles = await prisma_1.default.aIPilotProfile.findMany({
+            where: { userId },
+            orderBy: { createdAt: "desc" },
+        });
+        return res.json({
+            success: true,
+            profiles,
+        });
+    }
+    catch (error) {
+        console.error("Failed to fetch autopilot profiles:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch autopilot profiles.",
+        });
+    }
+});
+// POST /api/ai-pilot/profiles/:userId
+router.post("/profiles/:userId", async (req, res) => {
+    try {
+        const userId = Number(req.params.userId);
+        const { name, strategy, riskProfile, capital, takeProfit, stopLoss } = req.body;
+        if (!name || !strategy || !riskProfile || capital === undefined || takeProfit === undefined || stopLoss === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing required profile fields.",
+            });
+        }
+        const profile = await prisma_1.default.aIPilotProfile.create({
+            data: {
+                userId,
+                name,
+                strategy,
+                riskProfile,
+                capital: Number(capital),
+                takeProfit: Number(takeProfit),
+                stopLoss: Number(stopLoss),
+                enabled: false,
+            },
+        });
+        return res.json({
+            success: true,
+            profile,
+        });
+    }
+    catch (error) {
+        console.error("Failed to create autopilot profile:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to create autopilot profile.",
+        });
+    }
+});
+// PUT /api/ai-pilot/profiles/toggle/:profileId
+router.put("/profiles/toggle/:profileId", async (req, res) => {
+    try {
+        const profileId = Number(req.params.profileId);
+        const profile = await prisma_1.default.aIPilotProfile.findUnique({
+            where: { id: profileId },
+        });
+        if (!profile) {
+            return res.status(404).json({
+                success: false,
+                message: "Profile not found.",
+            });
+        }
+        const updated = await prisma_1.default.aIPilotProfile.update({
+            where: { id: profileId },
+            data: { enabled: !profile.enabled },
+        });
+        return res.json({
+            success: true,
+            profile: updated,
+        });
+    }
+    catch (error) {
+        console.error("Failed to toggle profile status:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to toggle profile status.",
+        });
+    }
+});
+// DELETE /api/ai-pilot/profiles/:profileId
+router.delete("/profiles/:profileId", async (req, res) => {
+    try {
+        const profileId = Number(req.params.profileId);
+        await prisma_1.default.aIPilotProfile.delete({
+            where: { id: profileId },
+        });
+        return res.json({
+            success: true,
+            message: "Profile deleted successfully.",
+        });
+    }
+    catch (error) {
+        console.error("Failed to delete profile:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete profile.",
+        });
+    }
+});
+// GET /api/ai-pilot/notifications/:userId
+router.get("/notifications/:userId", async (req, res) => {
+    try {
+        const userId = Number(req.params.userId);
+        const notifications = await prisma_1.default.notification.findMany({
+            where: { userId },
+            orderBy: { createdAt: "desc" },
+            take: 20,
+        });
+        return res.json({
+            success: true,
+            notifications,
+        });
+    }
+    catch (error) {
+        console.error("Failed to fetch notification logs:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch notification logs.",
+        });
+    }
+});
+// GET /api/ai-pilot/config/:userId (Deprecated fallback)
 router.get("/config/:userId", async (req, res) => {
     try {
         const userId = Number(req.params.userId);
@@ -430,7 +559,7 @@ router.get("/config/:userId", async (req, res) => {
         });
     }
 });
-// POST /api/ai-pilot/config/:userId
+// POST /api/ai-pilot/config/:userId (Deprecated fallback)
 router.post("/config/:userId", async (req, res) => {
     try {
         const userId = Number(req.params.userId);

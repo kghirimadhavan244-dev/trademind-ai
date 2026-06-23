@@ -128,21 +128,25 @@ function startAutopilotDaemon() {
     // Execute scan and trades every 30 seconds
     setInterval(async () => {
         try {
-            // 1. Get all users who have autopilot enabled
-            const users = await prisma_1.default.user.findMany({
-                where: { autopilotEnabled: true },
+            // 1. Get all active bot profiles
+            const profiles = await prisma_1.default.aIPilotProfile.findMany({
+                where: { enabled: true },
+                include: { user: true },
             });
-            if (users.length === 0)
+            if (profiles.length === 0)
                 return;
-            console.log(`🤖 [Autopilot Daemon] Running background trade check for ${users.length} user(s).`);
+            console.log(`🤖 [Autopilot Daemon] Running background trade check for ${profiles.length} active bot profile(s).`);
             // Get current market signals for this interval
             const signals = await getSignals();
             const activeSignals = signals.filter((s) => s.type !== "HOLD");
-            for (const user of users) {
+            for (const profile of profiles) {
                 try {
-                    const tpThreshold = user.autopilotTakeProfit;
-                    const slThreshold = user.autopilotStopLoss > 0 ? -user.autopilotStopLoss : user.autopilotStopLoss;
-                    const maxCapital = user.autopilotCapital;
+                    const user = profile.user;
+                    if (!user)
+                        continue;
+                    const tpThreshold = profile.takeProfit;
+                    const slThreshold = profile.stopLoss > 0 ? -profile.stopLoss : profile.stopLoss;
+                    const maxCapital = profile.capital;
                     // A. Risk Management Engine (check TP/SL for user's existing holdings)
                     const holdings = await prisma_1.default.holding.findMany({
                         where: { userId: user.id },
@@ -173,7 +177,7 @@ function startAutopilotDaemon() {
                                         },
                                     });
                                     const typeLabel = yieldPct >= tpThreshold ? "Take-Profit" : "Stop-Loss";
-                                    const msg = `[Autopilot] ${typeLabel} triggered for ${holding.symbol}. Sold ${holding.quantity} shares at ₹${currentPrice.toFixed(2)} (${yieldPct >= 0 ? "+" : ""}${yieldPct.toFixed(2)}%).`;
+                                    const msg = `[${profile.name}] ${typeLabel} triggered for ${holding.symbol}. Sold ${holding.quantity} shares at ₹${currentPrice.toFixed(2)} (${yieldPct >= 0 ? "+" : ""}${yieldPct.toFixed(2)}%).`;
                                     // Save persistent notification
                                     await prisma_1.default.notification.create({
                                         data: {
@@ -181,12 +185,12 @@ function startAutopilotDaemon() {
                                             message: msg,
                                         },
                                     });
-                                    console.log(`🤖 [Autopilot Daemon] User ${user.id}: ${msg}`);
+                                    console.log(`🤖 [Autopilot Daemon] [${profile.name}] User ${user.id}: ${msg}`);
                                 }
                             }
                         }
                         catch (err) {
-                            console.error(`Error checking holding ${holding.symbol} for user ${user.id}:`, err);
+                            console.error(`Error checking holding ${holding.symbol} for user ${user.id} in profile ${profile.name}:`, err);
                         }
                     }
                     // B. Execute new trades if active signals exist and user has cash
@@ -244,14 +248,14 @@ function startAutopilotDaemon() {
                                     price,
                                 },
                             });
-                            const msg = `[Autopilot] BUY: Purchased ${qty} shares of ${symbol} at ₹${price.toFixed(2)}.`;
+                            const msg = `[${profile.name}] BUY: Purchased ${qty} shares of ${symbol} at ₹${price.toFixed(2)}.`;
                             await prisma_1.default.notification.create({
                                 data: {
                                     userId: user.id,
                                     message: msg,
                                 },
                             });
-                            console.log(`🤖 [Autopilot Daemon] User ${user.id}: ${msg}`);
+                            console.log(`🤖 [Autopilot Daemon] [${profile.name}] User ${user.id}: ${msg}`);
                         }
                         else if (freshUser && type === "SELL") {
                             const holding = await prisma_1.default.holding.findFirst({
@@ -289,20 +293,20 @@ function startAutopilotDaemon() {
                                         price,
                                     },
                                 });
-                                const msg = `[Autopilot] SELL: Liquidated ${sellQty} shares of ${symbol} at ₹${price.toFixed(2)}.`;
+                                const msg = `[${profile.name}] SELL: Liquidated ${sellQty} shares of ${symbol} at ₹${price.toFixed(2)}.`;
                                 await prisma_1.default.notification.create({
                                     data: {
                                         userId: user.id,
                                         message: msg,
                                     },
                                 });
-                                console.log(`🤖 [Autopilot Daemon] User ${user.id}: ${msg}`);
+                                console.log(`🤖 [Autopilot Daemon] [${profile.name}] User ${user.id}: ${msg}`);
                             }
                         }
                     }
                 }
                 catch (userErr) {
-                    console.error(`Error processing background autopilot for user ${user.id}:`, userErr);
+                    console.error(`Error processing background autopilot profile ${profile.id}:`, userErr);
                 }
             }
         }

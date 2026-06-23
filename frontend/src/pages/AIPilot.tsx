@@ -71,11 +71,21 @@ function AIPilot() {
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState<"autopilot" | "strategy" | "backtest">("autopilot");
 
+  interface AIPilotProfile {
+    id: number;
+    name: string;
+    strategy: string;
+    riskProfile: string;
+    capital: number;
+    takeProfit: number;
+    stopLoss: number;
+    enabled: boolean;
+    createdAt: string;
+  }
+
   // Autopilot Tab States
   const [signals, setSignals] = useState<Signal[]>([]);
   const [scanning, setScanning] = useState(false);
-  const [autopilot, setAutopilot] = useState(false);
-  const [deployCapital, setDeployCapital] = useState("50000");
   const [logs, setLogs] = useState<string[]>([
     "System Initialized. AI Autopilot standby...",
     "Scanning modules loaded. 10 Indian assets registered."
@@ -83,8 +93,16 @@ function AIPilot() {
   const [source, setSource] = useState("AI Quantitative Engine");
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [cash, setCash] = useState<number>(0);
-  const [takeProfit, setTakeProfit] = useState("5.0");
-  const [stopLoss, setStopLoss] = useState("-3.0");
+
+  // Profile management states
+  const [profiles, setProfiles] = useState<AIPilotProfile[]>([]);
+  const [newBotName, setNewBotName] = useState("");
+  const [newBotStrategy, setNewBotStrategy] = useState("RSI");
+  const [newBotRisk, setNewBotRisk] = useState("Moderate");
+  const [newBotCapital, setNewBotCapital] = useState("50000");
+  const [newBotTP, setNewBotTP] = useState("5.0");
+  const [newBotSL, setNewBotSL] = useState("3.0");
+  const [isCreating, setIsCreating] = useState(false);
 
   // Strategy Tab States
   const [selectedStrategy, setSelectedStrategy] = useState("RSI");
@@ -167,6 +185,124 @@ function AIPilot() {
     }
   }
 
+  // Fetch recent log events from user notifications
+  async function loadLogs() {
+    if (!user) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ai-pilot/notifications/${user.id}`);
+      const data = await res.json();
+      if (data.success && data.notifications) {
+        const formattedLogs = data.notifications.map((n: any) => {
+          const time = new Date(n.createdAt).toLocaleTimeString("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          });
+          return `[${time}] ${n.message}`;
+        });
+        setLogs(formattedLogs.reverse());
+      }
+    } catch (err) {
+      console.error("Failed to load notification logs:", err);
+    }
+  }
+
+  // Fetch bot profiles
+  async function loadProfiles() {
+    if (!user) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ai-pilot/profiles/${user.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setProfiles(data.profiles);
+      }
+    } catch (err) {
+      console.error("Failed to load profiles:", err);
+    }
+  }
+
+  async function handleCreateProfile(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    if (!newBotName.trim()) {
+      alert("Please provide a name for the pilot bot.");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ai-pilot/profiles/${user.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newBotName,
+          strategy: newBotStrategy,
+          riskProfile: newBotRisk,
+          capital: parseFloat(newBotCapital) || 50000,
+          takeProfit: parseFloat(newBotTP) || 5.0,
+          stopLoss: parseFloat(newBotSL) > 0 ? -parseFloat(newBotSL) : parseFloat(newBotSL) || -3.0,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewBotName("");
+        setNewBotCapital("50000");
+        setNewBotTP("5.0");
+        setNewBotSL("3.0");
+        loadProfiles();
+        addLog(`[System] Created new AI Pilot bot: "${data.profile.name}" (${data.profile.strategy} strategy).`);
+      } else {
+        alert(data.message || "Failed to create profile.");
+      }
+    } catch (err) {
+      console.error("Failed to create profile:", err);
+      alert("Failed to connect to backend service.");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function handleToggleProfile(profileId: number, profileName: string, currentlyEnabled: boolean) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ai-pilot/profiles/toggle/${profileId}`, {
+        method: "PUT",
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadProfiles();
+        const stateMsg = !currentlyEnabled ? "ACTIVATED" : "DEACTIVATED";
+        addLog(`[System] Pilot Bot "${profileName}" has been ${stateMsg}.`);
+        window.dispatchEvent(
+          new CustomEvent("new-notification", {
+            detail: {
+              message: `AI Pilot Bot "${profileName}" is now ${stateMsg.toLowerCase()}.`,
+            },
+          })
+        );
+      }
+    } catch (err) {
+      console.error("Failed to toggle profile:", err);
+    }
+  }
+
+  async function handleDeleteProfile(profileId: number, profileName: string) {
+    if (!window.confirm(`Are you sure you want to delete the pilot bot "${profileName}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ai-pilot/profiles/${profileId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadProfiles();
+        addLog(`[System] Pilot Bot "${profileName}" has been deleted.`);
+      }
+    } catch (err) {
+      console.error("Failed to delete profile:", err);
+    }
+  }
+
   function addLog(message: string) {
     const timestamp = new Date().toLocaleTimeString();
     setLogs((prev) => [...prev, `[${timestamp}] ${message}`]);
@@ -174,74 +310,23 @@ function AIPilot() {
 
   // Load configuration and data on mount
   useEffect(() => {
-    async function loadConfig() {
-      if (!user) return;
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/ai-pilot/config/${user.id}`);
-        const data = await res.json();
-        if (data.success && data.config) {
-          setAutopilot(data.config.autopilotEnabled);
-          setTakeProfit(data.config.autopilotTakeProfit.toString());
-          setStopLoss(data.config.autopilotStopLoss.toString());
-          setDeployCapital(data.config.autopilotCapital.toString());
-          
-          if (data.config.autopilotEnabled) {
-            addLog("[Autopilot] ACTIVATED. Background trading daemon is active on the server.");
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load autopilot config:", err);
-      }
-    }
-
-    loadConfig();
+    loadProfiles();
+    loadLogs();
     scanMarket();
     loadPortfolio();
+
+    const interval = setInterval(() => {
+      loadLogs();
+      loadPortfolio();
+    }, 10000); // update logs and portfolio every 10s
+
+    return () => clearInterval(interval);
   }, [user?.id]);
 
   // Auto-scroll logs
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
-
-  // Handle Autopilot Toggle
-  async function handleToggleAutopilot() {
-    if (!user) return;
-    const nextVal = !autopilot;
-    setAutopilot(nextVal);
-
-    addLog(nextVal
-      ? `[Autopilot] ACTIVATED. Background trading daemon is now scanning NSE markets on the server.`
-      : `[Autopilot] DEACTIVATED. Switched to manual override.`
-    );
-
-    window.dispatchEvent(
-      new CustomEvent("new-notification", {
-        detail: {
-          message: nextVal
-            ? `AI Autopilot Activated. Background daemon is now executing trades on the server.`
-            : `AI Autopilot Deactivated. Switched to manual override.`,
-        },
-      })
-    );
-
-    try {
-      await fetch(`${API_BASE_URL}/api/ai-pilot/config/${user.id}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          autopilotEnabled: nextVal,
-          takeProfit: parseFloat(takeProfit) || 5.0,
-          stopLoss: parseFloat(stopLoss) || -3.0,
-          capital: parseFloat(deployCapital) || 50000.0,
-        }),
-      });
-    } catch (err) {
-      console.error("Failed to update autopilot config on toggle:", err);
-    }
-  }
 
   // Trigger historical backtest
   async function runBacktestSimulation() {
@@ -302,8 +387,8 @@ function AIPilot() {
         body: JSON.stringify({
           userId: user.id,
           signal,
-          takeProfit: parseFloat(takeProfit) || 5.0,
-          stopLoss: parseFloat(stopLoss) || -3.0,
+          takeProfit: 5.0,
+          stopLoss: -3.0,
         }),
       });
       const data = await res.json();
@@ -454,73 +539,7 @@ function AIPilot() {
           <div className="space-y-8">
             {/* Top Metrics Cards Row */}
             <div className="grid gap-6 md:grid-cols-3">
-              {/* Autopilot config */}
-              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                  <h3 className="text-base font-extrabold flex items-center gap-2 text-slate-800 dark:text-white">
-                    <Sparkles className="w-5 h-5 text-amber-500" /> Autopilot Switch
-                    <HelpTip content="Toggle to activate TradeMind's AI model to run automated transactions on your account based on neural scanner suggestions." />
-                  </h3>
-                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-normal">
-                    Let TradeMind AI scan recommendations and trade dynamically on your virtual cash balance.
-                  </p>
-                  
-                  {/* Deployment Input */}
-                  <div className="mt-4">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Capital to Deploy (INR)</label>
-                    <input 
-                      type="number"
-                      value={deployCapital}
-                      onChange={(e) => setDeployCapital(e.target.value)}
-                      disabled={autopilot}
-                      className="w-full mt-1.5 rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm outline-none focus:border-blue-500 font-bold"
-                    />
-                  </div>
-
-                  {/* Take Profit & Stop Loss Thresholds */}
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Take Profit (%)</label>
-                      <input 
-                        type="number"
-                        step="0.1"
-                        value={takeProfit}
-                        onChange={(e) => setTakeProfit(e.target.value)}
-                        disabled={autopilot}
-                        className="w-full mt-1.5 rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-blue-500 font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Stop Loss (%)</label>
-                      <input 
-                        type="number"
-                        step="0.1"
-                        value={stopLoss}
-                        onChange={(e) => setStopLoss(e.target.value)}
-                        disabled={autopilot}
-                        className="w-full mt-1.5 rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-blue-500 font-bold"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex items-center justify-between border-t border-slate-100 dark:border-slate-850 pt-4">
-                  <span className={`text-[10px] font-black uppercase tracking-wider ${autopilot ? "text-emerald-500 animate-pulse" : "text-slate-400"}`}>
-                    {autopilot ? "Autopilot Active" : "Manual Standby"}
-                  </span>
-
-                  <button
-                    onClick={handleToggleAutopilot}
-                    className={`rounded-full p-1 w-12 transition-colors duration-300 flex ${
-                      autopilot ? "bg-emerald-500 justify-end" : "bg-slate-200 dark:bg-slate-800 justify-start"
-                    } cursor-pointer`}
-                  >
-                    <span className="w-5 h-5 rounded-full bg-white shadow-md block"></span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Active Scanner Status */}
+              {/* Neural Scanner */}
               <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col justify-between">
                 <div>
                   <h3 className="text-base font-extrabold flex items-center gap-2 text-slate-800 dark:text-white">
@@ -548,6 +567,28 @@ function AIPilot() {
                 </div>
               </div>
 
+              {/* Active AI Pilots */}
+              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h3 className="text-base font-extrabold flex items-center gap-2 text-slate-800 dark:text-white">
+                    <Cpu className="w-5 h-5 text-amber-500" /> Active AI Pilots
+                    <HelpTip content="The number of background bot profiles currently running trading signals on your virtual capital." />
+                  </h3>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-normal">
+                    Automated trading profiles scanning and submitting orders in the background.
+                  </p>
+                </div>
+
+                <div className="mt-6 border-t border-slate-100 dark:border-slate-850 pt-4 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Enabled Bots</span>
+                    <span className="text-2xl font-black text-blue-650 dark:text-blue-450 mt-1 block">
+                      {profiles.filter(p => p.enabled).length} / {profiles.length} Running
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Paper Account Balances */}
               <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col justify-between">
                 <div>
@@ -572,11 +613,203 @@ function AIPilot() {
 
                   <button
                     onClick={resetPaperAccount}
-                    className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/10 dark:bg-red-950/10 hover:bg-red-50/30 text-red-600 dark:text-red-400 font-bold px-3 py-1.5 text-xs transition cursor-pointer"
+                    className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/10 dark:bg-red-950/10 hover:bg-red-50/30 text-red-650 dark:text-red-400 font-bold px-3 py-1.5 text-xs transition cursor-pointer"
                   >
                     Reset Account
                   </button>
                 </div>
+              </div>
+            </div>
+
+            {/* AI Pilot Profiles Grid & Form */}
+            <div className="grid gap-8 lg:grid-cols-3">
+              {/* Left 2 Columns: Profiles List */}
+              <div className="lg:col-span-2 space-y-6">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                    Your AI Pilot Bots
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Each bot operates independently in the background based on its target strategy.
+                  </p>
+                </div>
+
+                {profiles.length === 0 ? (
+                  <div className="py-16 px-6 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl bg-white dark:bg-slate-900/50">
+                    <Cpu className="w-12 h-12 text-slate-400 mx-auto mb-4 animate-pulse" />
+                    <h4 className="text-base font-bold text-slate-700 dark:text-slate-350">No AI Pilots Created Yet</h4>
+                    <p className="text-xs text-slate-550 dark:text-slate-400 mt-1 max-w-sm mx-auto leading-normal">
+                      Configure and deploy your first custom AI trading bot in the right-hand panel. Specify its risk profile, capital, and stop loss rules.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    {profiles.map((profile) => (
+                      <div
+                        key={profile.id}
+                        className="rounded-3xl border p-5 bg-white dark:bg-slate-900 shadow-sm transition hover:shadow-md border-slate-200 dark:border-slate-800 flex flex-col justify-between"
+                      >
+                        <div>
+                          {/* Header */}
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h4 className="font-extrabold text-lg text-slate-900 dark:text-white">
+                                {profile.name}
+                              </h4>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                                Strategy: {profile.strategy}
+                              </span>
+                            </div>
+
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                              profile.enabled
+                                ? "bg-emerald-50 border-emerald-300 text-emerald-850 dark:bg-emerald-950/50 dark:border-emerald-850 dark:text-emerald-400"
+                                : "bg-slate-50 border-slate-250 text-slate-600 dark:bg-slate-800 dark:border-slate-750 dark:text-slate-400"
+                            }`}>
+                              {profile.enabled ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+
+                          {/* Strategy & Parameters */}
+                          <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-950/50 p-3 rounded-2xl mb-4 font-semibold">
+                            <div>
+                              <span className="text-slate-400 dark:text-slate-500 block text-[9px] font-bold uppercase">Risk Level</span>
+                              <span className="text-slate-800 dark:text-slate-200">{profile.riskProfile}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 dark:text-slate-500 block text-[9px] font-bold uppercase">Allocated Capital</span>
+                              <span className="text-slate-800 dark:text-slate-200">₹{profile.capital.toLocaleString("en-IN")}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 dark:text-slate-500 block text-[9px] font-bold uppercase">Take Profit</span>
+                              <span className="text-emerald-600 dark:text-emerald-400">+{profile.takeProfit.toFixed(1)}%</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 dark:text-slate-500 block text-[9px] font-bold uppercase">Stop Loss</span>
+                              <span className="text-rose-600 dark:text-rose-400">{profile.stopLoss.toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Controls */}
+                        <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-850 pt-4 mt-2">
+                          <button
+                            onClick={() => handleDeleteProfile(profile.id, profile.name)}
+                            className="text-xs font-bold text-rose-500 hover:text-rose-600 dark:hover:text-rose-455 transition cursor-pointer"
+                          >
+                            Delete Bot
+                          </button>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">
+                              {profile.enabled ? "Disable" : "Enable"}
+                            </span>
+                            <button
+                              onClick={() => handleToggleProfile(profile.id, profile.name, profile.enabled)}
+                              className={`rounded-full p-1 w-11 transition-colors duration-300 flex ${
+                                profile.enabled ? "bg-emerald-500 justify-end" : "bg-slate-200 dark:bg-slate-800 justify-start"
+                              } cursor-pointer`}
+                            >
+                              <span className="w-4 h-4 rounded-full bg-white shadow-md block"></span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Right 1 Column: Create Bot Form */}
+              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col justify-between">
+                <form onSubmit={handleCreateProfile} className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-amber-500" /> Create Pilot Bot
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                      Configure and deploy a background trading bot with strict risk filters.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase block mb-1">Bot Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Nifty Scalper"
+                      value={newBotName}
+                      onChange={(e) => setNewBotName(e.target.value)}
+                      className="w-full rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3.5 py-2.5 text-xs outline-none focus:border-blue-500 font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-555 uppercase block mb-1">Strategy Algorithm</label>
+                    <select
+                      value={newBotStrategy}
+                      onChange={(e) => setNewBotStrategy(e.target.value)}
+                      className="w-full rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-xs font-semibold outline-none focus:border-blue-500"
+                    >
+                      <option value="RSI">RSI Mean Reversion (14 periods)</option>
+                      <option value="EMA">EMA Crossover (10 EMA / 30 EMA)</option>
+                      <option value="Momentum">Momentum Breakout (5-day ROC)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-555 uppercase block mb-1">Risk Profile</label>
+                    <select
+                      value={newBotRisk}
+                      onChange={(e) => setNewBotRisk(e.target.value)}
+                      className="w-full rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-xs font-semibold outline-none focus:border-blue-500"
+                    >
+                      <option value="Conservative">Conservative</option>
+                      <option value="Moderate">Moderate</option>
+                      <option value="Aggressive">Aggressive</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-555 uppercase block mb-1">Allocated Capital (INR)</label>
+                    <input
+                      type="number"
+                      value={newBotCapital}
+                      onChange={(e) => setNewBotCapital(e.target.value)}
+                      className="w-full rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3.5 py-2.5 text-xs outline-none focus:border-blue-500 font-bold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 dark:text-slate-555 uppercase block mb-1">Take Profit (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={newBotTP}
+                        onChange={(e) => setNewBotTP(e.target.value)}
+                        className="w-full rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-xs outline-none focus:border-blue-500 font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 dark:text-slate-555 uppercase block mb-1">Stop Loss (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={newBotSL}
+                        onChange={(e) => setNewBotSL(e.target.value)}
+                        className="w-full rounded-xl border border-slate-250 dark:border-slate-750 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-xs outline-none focus:border-blue-500 font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isCreating}
+                    className="w-full mt-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 text-xs transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Cpu className="w-4 h-4 animate-pulse" /> Create AI Pilot Bot
+                  </button>
+                </form>
               </div>
             </div>
 
@@ -589,7 +822,7 @@ function AIPilot() {
                     Autopilot Yield Growth
                     <HelpTip content="Cumulative return comparison between the AI Autopilot model and the baseline Nifty 50 index." />
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Cumulative percentage return compared to Nifty 50 baseline performance.</p>
+                  <p className="text-xs text-slate-550 dark:text-slate-400 mt-0.5">Cumulative percentage return compared to Nifty 50 baseline performance.</p>
                 </div>
 
                 <div className="h-64 mt-6">
@@ -618,11 +851,15 @@ function AIPilot() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto font-mono text-[10px] space-y-2 text-slate-350 scrollbar-none pr-1">
-                  {logs.map((log, idx) => (
-                    <div key={idx} className="leading-relaxed whitespace-pre-wrap">
-                      <span className="text-emerald-500">{">"}</span> {log}
-                    </div>
-                  ))}
+                  {logs.length === 0 ? (
+                    <div className="text-slate-500 italic py-8 text-center">Waiting for AI bots to log actions...</div>
+                  ) : (
+                    logs.map((log, idx) => (
+                      <div key={idx} className="leading-relaxed whitespace-pre-wrap">
+                        <span className="text-emerald-500">{">"}</span> {log}
+                      </div>
+                    ))
+                  )}
                   <div ref={logsEndRef} />
                 </div>
               </div>
@@ -660,7 +897,7 @@ function AIPilot() {
                             <td className="py-3.5 text-xs">{h.quantity} shares</td>
                             <td className="py-3.5 text-xs">₹{h.buyPrice.toFixed(2)}</td>
                             <td className="py-3.5 text-xs text-slate-800 dark:text-slate-250">₹{h.currentPrice.toFixed(2)}</td>
-                            <td className={`py-3.5 text-right text-xs font-bold ${profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-450"}`}>
+                            <td className={`py-3.5 text-right text-xs font-bold ${profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-455"}`}>
                               {profit >= 0 ? "+" : ""}
                               {profitPct.toFixed(2)}% (₹{profit.toLocaleString("en-IN", { maximumFractionDigits: 0 })})
                             </td>
@@ -712,7 +949,7 @@ function AIPilot() {
                             {/* Signal Badge */}
                             <span className={`px-3.5 py-1 rounded-full text-xs font-black uppercase border ${
                               sig.type === "BUY"
-                                ? "bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-400"
+                                ? "bg-emerald-100 border-emerald-300 text-emerald-850 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-400"
                                 : sig.type === "SELL"
                                 ? "bg-rose-100 border-rose-300 text-rose-800 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-400"
                                 : "bg-slate-100 border-slate-300 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
@@ -746,7 +983,7 @@ function AIPilot() {
                           </div>
                           <div>
                             <span className="text-[10px] font-bold text-slate-400 uppercase">Stop Loss</span>
-                            <span className="text-sm font-extrabold text-rose-600 dark:text-rose-450 block mt-0.5">₹{sig.stopLoss.toFixed(2)}</span>
+                            <span className="text-sm font-extrabold text-rose-600 dark:text-rose-455 block mt-0.5">₹{sig.stopLoss.toFixed(2)}</span>
                           </div>
                         </div>
 

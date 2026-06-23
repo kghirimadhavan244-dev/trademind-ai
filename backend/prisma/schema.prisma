@@ -30,10 +30,11 @@ model User {
   autopilotCapital     Float    @default(50000)
 
   // Relations
-  holdings     Holding[]
-  transactions Transaction[]
-  watchlist    Watchlist[]
+  holdings      Holding[]
+  transactions  Transaction[]
+  watchlist     Watchlist[]
   notifications Notification[]
+  aiPilots      AIPilotProfile[]
 }
 
 model Holding {
@@ -82,6 +83,21 @@ model Notification {
   createdAt DateTime @default(now())
   read      Boolean  @default(false)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AIPilotProfile {
+  id          Int      @id @default(autoincrement())
+  name        String   // e.g. "Tech Scalper"
+  strategy    String   // e.g. "RSI", "EMA", "Momentum", "Neural"
+  riskProfile String   // e.g. "Conservative", "Moderate", "Aggressive"
+  capital     Float    // capital allocated
+  takeProfit  Float    // e.g. 5.0
+  stopLoss    Float    // e.g. -3.0
+  enabled     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 
